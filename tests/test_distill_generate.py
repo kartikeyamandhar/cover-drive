@@ -123,6 +123,14 @@ def test_run_batch_collects_pairs(tmp_path: Path) -> None:
     assert stats.kept == 2
 
 
+def test_run_batch_budget_guard_stops_between_chunks(tmp_path: Path) -> None:
+    config = DistillConfig(data_dir=tmp_path / "data")
+    items = [_item(f"0-0-{i}") for i in range(6)]
+    # one item per chunk, a tiny cap: the guard stops partway, not all 6
+    stats = run_batch(_client(), config, items, budget_cap=0.0005, chunk_size=1)
+    assert 0 < stats.processed < 6
+
+
 def test_dry_run_estimates_without_api(tmp_path: Path) -> None:
     processed = tmp_path / "data" / "processed"
     processed.mkdir(parents=True)
