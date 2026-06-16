@@ -64,7 +64,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 # Explicit targets so a bare `uv run mypy` (pre-commit hook) has files to check;
 # the `uv run mypy .` verify command overrides this with the whole tree.
-files = ["app", "configs", "tests"]
+files = ["app", "configs", "scripts", "tests"]
 warn_unreachable = true
 warn_unused_ignores = true
 warn_redundant_casts = true
@@ -83,6 +83,9 @@ warn_required_dynamic_aliases = true
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Put the repo root on sys.path so `app`/`configs` import deterministically,
+# independent of the editable-install state under `uv run`.
+pythonpath = ["."]
 addopts = "-q --cov=app --cov=configs --cov-report=term-missing --cov-fail-under=85"
 
 [tool.coverage.run]

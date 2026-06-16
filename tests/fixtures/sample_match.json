@@ -1,0 +1,127 @@
+{
+  "meta": { "data_version": "1.1.0", "created": "2023-01-02", "revision": 1 },
+  "info": {
+    "balls_per_over": 6,
+    "dates": ["2023-01-01"],
+    "gender": "male",
+    "match_type": "T20",
+    "team_type": "club",
+    "season": "2023",
+    "overs": 1,
+    "event": { "name": "Test League", "match_number": 1 },
+    "teams": ["Team Alpha", "Team Beta"],
+    "players": {
+      "Team Alpha": ["Alpha One", "Alpha Two", "Alpha Three", "Alpha Bowl1"],
+      "Team Beta": ["Beta One", "Beta Two", "Beta Bat1", "Beta Bat2"]
+    },
+    "registry": {
+      "people": {
+        "Alpha One": "aaaa0001",
+        "Alpha Two": "aaaa0002",
+        "Alpha Three": "aaaa0003",
+        "Alpha Bowl1": "aaaa1001",
+        "Beta One": "bbbb0001",
+        "Beta Two": "bbbb0002",
+        "Beta Bat1": "bbbb1001",
+        "Beta Bat2": "bbbb1002"
+      }
+    },
+    "toss": { "winner": "Team Alpha", "decision": "bat" },
+    "outcome": { "winner": "Team Alpha", "by": { "runs": 11 } }
+  },
+  "innings": [
+    {
+      "team": "Team Alpha",
+      "overs": [
+        {
+          "over": 0,
+          "deliveries": [
+            {
+              "batter": "Alpha One",
+              "bowler": "Beta One",
+              "non_striker": "Alpha Two",
+              "runs": { "batter": 4, "extras": 0, "total": 4 }
+            },
+            {
+              "batter": "Alpha One",
+              "bowler": "Beta One",
+              "non_striker": "Alpha Two",
+              "runs": { "batter": 1, "extras": 0, "total": 1 }
+            },
+            {
+              "batter": "Alpha Two",
+              "bowler": "Beta One",
+              "non_striker": "Alpha One",
+              "runs": { "batter": 0, "extras": 1, "total": 1 },
+              "extras": { "wides": 1 }
+            },
+            {
+              "batter": "Alpha Two",
+              "bowler": "Beta One",
+              "non_striker": "Alpha One",
+              "runs": { "batter": 0, "extras": 0, "total": 0 }
+            },
+            {
+              "batter": "Alpha Two",
+              "bowler": "Beta One",
+              "non_striker": "Alpha One",
+              "runs": { "batter": 1, "extras": 1, "total": 2 },
+              "extras": { "noballs": 1 }
+            },
+            {
+              "batter": "Alpha Two",
+              "bowler": "Beta One",
+              "non_striker": "Alpha One",
+              "runs": { "batter": 0, "extras": 0, "total": 0 },
+              "wickets": [{ "player_out": "Alpha Two", "kind": "bowled" }]
+            },
+            {
+              "batter": "Alpha Three",
+              "bowler": "Beta One",
+              "non_striker": "Alpha One",
+              "runs": { "batter": 6, "extras": 0, "total": 6 }
+            },
+            {
+              "batter": "Alpha Three",
+              "bowler": "Beta One",
+              "non_striker": "Alpha One",
+              "runs": { "batter": 1, "extras": 0, "total": 1 }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "team": "Team Beta",
+      "target": { "runs": 16, "overs": 1 },
+      "overs": [
+        {
+          "over": 0,
+          "deliveries": [
+            {
+              "batter": "Beta Bat1",
+              "bowler": "Alpha Bowl1",
+              "non_striker": "Beta Bat2",
+              "runs": { "batter": 1, "extras": 0, "total": 1 }
+            },
+            {
+              "batter": "Beta Bat1",
+              "bowler": "Alpha Bowl1",
+              "non_striker": "Beta Bat2",
+              "runs": { "batter": 4, "extras": 0, "total": 4 }
+            },
+            {
+              "batter": "Beta Bat1",
+              "bowler": "Alpha Bowl1",
+              "non_striker": "Beta Bat2",
+              "runs": { "batter": 0, "extras": 0, "total": 0 },
+              "wickets": [
+                { "player_out": "Beta Bat2", "kind": "run out", "fielders": [{ "name": "Alpha One" }] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
