@@ -1,0 +1,7 @@
+# Explicitly deny install/build scripts for the two native deps so installs are
+# deterministic and never prompt for build approval. Both ship prebuilt binaries,
+# so denying their build scripts does not break lint or build. sharp (runtime
+# image optimization) is revisited at deploy time (Phase 8); Vercel provides it.
+allowBuilds:
+  sharp: false
+  unrs-resolver: false

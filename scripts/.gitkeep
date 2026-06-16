@@ -1,0 +1,1 @@
+# CLI entrypoints; each an idempotent, resumable job keyed on (match_id, ball_id). Phase 1+.

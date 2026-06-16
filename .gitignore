@@ -1,0 +1,49 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# uv.lock IS committed (reproducible env); the virtualenv is not.
+
+# --- Node / web ---
+node_modules/
+web/.next/
+web/out/
+web/build/
+web/next-env.d.ts
+.pnpm-store/
+
+# --- Environment / secrets (never commit real secrets) ---
+.env
+.env.*
+!.env.example
+
+# --- Data: local scratch only, never committed (CLAUDE.md standing rule) ---
+data/
+
+# --- Model artifacts and caches ---
+.cache/
+hf_cache/
+*.gguf
+*.safetensors
+*.bin
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+*.swp
+
+# --- Markdown: only the root README.md is committed (CLAUDE.md standing rule).
+#     CLAUDE.md, docs/**, ADRs, phase files, and PROGRESS.md stay local. ---
+*.md
+!/README.md
