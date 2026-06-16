@@ -13,10 +13,17 @@ import re
 from dataclasses import dataclass, field
 
 _SCORE_RE = re.compile(r"(\d+)\s*/\s*(\d+)")
-_NEED_RE = re.compile(r"(\d+)\s+(?:runs?\s+)?(?:needed|required|to\s+win\s+)?(?:off|from)\s+(\d+)")
+# A chase equation "X off Y" - but only when a need/require/win/chase word is near
+# (so a batter's "27 off 24" score is NOT mistaken for the equation).
+_EQ_RE = re.compile(
+    r"(\d+)\s+(?:runs?\s+)?(?:needed\s+|required\s+|to\s+win\s+)?(?:off|from)\s+(\d+)"
+)
+_EQ_CONTEXT = re.compile(r"need|requir|to\s+win|to\s+get|chase")
 _WORD_RE = re.compile(r"[a-z']+")
+_NUMBER_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten"
+_FIGURES_BEFORE = re.compile(rf"(?:\d+|\b(?:{_NUMBER_WORDS}))\s+for\s+$")
 
-_WICKET_WORDS = frozenset({"bowled", "caught", "lbw", "stumped", "dismissed", "wicket", "castled"})
+_WICKET_WORDS = frozenset({"bowled", "caught", "lbw", "stumped", "dismissed", "castled"})
 
 
 @dataclass(frozen=True)
@@ -33,13 +40,34 @@ def _score(text: str) -> tuple[int, int] | None:
 
 
 def _need(text: str) -> tuple[int, int] | None:
-    match = _NEED_RE.search(text)
-    return (int(match.group(1)), int(match.group(2))) if match else None
+    """Extract the chase equation, ignoring batter scores phrased as 'X off Y'."""
+    for match in _EQ_RE.finditer(text):
+        window = text[max(0, match.start() - 22) : match.end() + 12].lower()
+        if _EQ_CONTEXT.search(window):
+            return (int(match.group(1)), int(match.group(2)))
+    return None
 
 
 def _claims_boundary(line_lower: str, word: str) -> bool:
-    """True if ``word`` is a boundary claim, not a wicket count ('six down' = wickets)."""
-    return bool(re.search(rf"\b{word}\b(?!\s+(?:down|wickets?))", line_lower))
+    """True if ``word`` ("four"/"six") is a real boundary claim.
+
+    Excludes cricket's other uses of the word: a wicket count ('six down', 'four
+    wickets', '55 for four'), an over reference ('inside six', 'six overs'), bowling
+    figures ('two for six'), and a score fragment ('162/4 ... four').
+    """
+    for match in re.finditer(rf"\b{word}\b", line_lower):
+        after = line_lower[match.end() : match.end() + 9]
+        before = line_lower[max(0, match.start() - 18) : match.start()]
+        if re.match(r"\s+(?:down|wickets?|overs?|for\b)", after):
+            continue  # 'six down' / 'four wickets' / 'six overs' / 'six for 24'
+        if re.search(r"(?:inside|over)\s+$", before):
+            continue  # 'inside six' / 'over six'
+        if _FIGURES_BEFORE.search(before):
+            continue  # '55 for four' / 'two for six'
+        if re.search(r"\d\s*/\s*$", before):
+            continue  # score 'X/four'
+        return True
+    return False
 
 
 def faithfulness_check(line: str, event: str, state_string: str) -> FaithResult:
@@ -55,7 +83,7 @@ def faithfulness_check(line: str, event: str, state_string: str) -> FaithResult:
     claims_six = bool(re.search(r"\b(?:maximum|sixer)\b", line_lower)) or _claims_boundary(
         line_lower, "six"
     )
-    claims_four = _claims_boundary(line_lower, "four") or "boundary" in words
+    claims_four = _claims_boundary(line_lower, "four")
 
     if event_six and claims_four:
         reasons.append("calls a six a four")

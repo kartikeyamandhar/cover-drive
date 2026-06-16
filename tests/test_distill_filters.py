@@ -43,6 +43,30 @@ def test_wickets_count_is_not_a_boundary() -> None:
     assert faithfulness_check("Hyderabad are six down and reeling.", "dot ball", _STATE).ok
 
 
+def test_batter_score_off_y_is_not_the_equation() -> None:
+    # "27 off 24" is the batter's score; the real equation "83 off 55" is correct
+    state = "T20 IPL | Mumbai Indians 56/2 | need 83 off 55 | middle"
+    line = "Sharma moves to 27 off 24, but Mumbai still need 83 off 55."
+    assert faithfulness_check(line, "FOUR off the bat", state).ok
+
+
+def test_inside_six_overs_is_not_a_boundary() -> None:
+    state = "T20 IPL | Sunrisers Hyderabad 37/2 | need 118 off 87 | powerplay"
+    line = "Bowled him! Three down inside six and the chase is under pressure."
+    assert faithfulness_check(line, "WICKET, bowled", state).ok
+
+
+def test_for_four_wickets_is_not_a_boundary() -> None:
+    state = "T20 IPL | Punjab Kings 55/4 | need 138 off 66 | middle"
+    line = "Caught! Punjab in tatters at 55 for four, needing 138 off 66."
+    assert faithfulness_check(line, "WICKET, caught", state).ok
+
+
+def test_off_by_one_equation_is_caught() -> None:
+    state = "T20 IPL | Pune Warriors 126/9 | need 48 off 8 | death"
+    assert not faithfulness_check("They need 48 off 7 now.", "1 run", state).ok
+
+
 def test_all_seed_lines_are_faithful() -> None:
     for exemplar in EXEMPLARS:
         for line in exemplar.lines.values():
