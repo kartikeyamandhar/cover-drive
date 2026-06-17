@@ -35,6 +35,8 @@ def _config(args: argparse.Namespace) -> DistillConfig:
         overrides["teacher_model"] = args.model
     if args.budget is not None:
         overrides["budget_usd_cap"] = args.budget
+    if args.primary_set_size is not None:
+        overrides["primary_set_size"] = args.primary_set_size
     return DistillConfig().model_copy(update=overrides)
 
 
@@ -47,6 +49,9 @@ def main() -> None:
     parser.add_argument("--data-dir", type=Path, default=None, help="root data directory")
     parser.add_argument("--model", type=str, default=None, help="override the teacher model id")
     parser.add_argument("--budget", type=float, default=None, help="override the USD budget cap")
+    parser.add_argument(
+        "--primary-set-size", type=int, default=None, help="override primary persona set size"
+    )
     parser.add_argument("--json-logs", action="store_true", help="emit JSON logs")
     args = parser.parse_args()
 

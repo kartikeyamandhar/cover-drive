@@ -187,6 +187,23 @@ def judge_filter_sync(
     return stats
 
 
+def _warm_judge_cache(client: anthropic.Anthropic, model: str) -> None:
+    """Write the 4830-token rubric prefix to cache once, so batch requests read it
+    at 0.1x instead of each paying (and re-writing) the full prefix."""
+    try:
+        judge_one(
+            client,
+            persona_key="broadcast",
+            persona_instruction="lead caller",
+            event="dot ball",
+            state="T20 | Inns 1 | 0.1 | A 0/0 | powerplay",
+            line="No run.",
+            model=model,
+        )
+    except anthropic.APIError as exc:
+        log.warning("judge cache warm failed", error=str(exc))
+
+
 def judge_filter_batch(
     client: anthropic.Anthropic,
     config: DistillConfig,
@@ -195,16 +212,27 @@ def judge_filter_batch(
     buckets: frozenset[str] = HIGH_RISK_BUCKETS,
     poll_seconds: int = 30,
     chunk_size: int = 500,
+    budget_usd: float = 15.0,
 ) -> JudgeFilterStats:
-    """Judge the high-risk survivors via the Batches API (50% off) and drop defects."""
+    """Judge the high-risk survivors via the Batches API (50% off) and drop defects.
+
+    The rubric cache is warmed once before submitting; the spend is checked BEFORE
+    each chunk so a cache miss (which would make each call pay the full 4830-token
+    prefix) can overshoot the cap by at most one chunk, never the whole run.
+    """
     pairs = _load_pairs(config)
     targets = [(i, p) for i, p in enumerate(pairs) if is_high_risk(p.data, buckets)]
     stats = JudgeFilterStats(pairs=len(pairs), high_risk=len(targets))
     drop_ids: set[int] = set()
     dropped_log: list[dict[str, str]] = []
     in_price, out_price = PRICING[model]
+    if targets:
+        _warm_judge_cache(client, model)
 
     for start in range(0, len(targets), chunk_size):
+        if stats.spend_usd >= budget_usd:
+            log.warning("judge-filter budget reached", spend=round(stats.spend_usd, 4))
+            break
         chunk = targets[start : start + chunk_size]
         by_cid = {f"j{i}": (idx, pair) for i, (idx, pair) in enumerate(chunk)}
         requests = [

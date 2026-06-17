@@ -64,7 +64,7 @@ def main() -> None:
 
     client = _make_client()
     stats: JudgeFilterStats = (
-        judge_filter_batch(client, config, model=args.model)
+        judge_filter_batch(client, config, model=args.model, budget_usd=args.budget)
         if args.mode == "batch"
         else judge_filter_sync(
             client, config, model=args.model, max_workers=args.workers, budget_usd=args.budget
