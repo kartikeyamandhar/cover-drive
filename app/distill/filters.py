@@ -14,9 +14,12 @@ from dataclasses import dataclass, field
 
 _SCORE_RE = re.compile(r"(\d+)\s*/\s*(\d+)")
 # A chase equation "X off Y" - but only when a need/require/win/chase word is near
-# (so a batter's "27 off 24" score is NOT mistaken for the equation).
+# (so a batter's "27 off 24" score is NOT mistaken for the equation). The connective
+# tissue is permissive: "2 needed off the last 2", "5 more from 4 balls", "8 off 7
+# now" all parse, because the teacher's off-by-one error hides behind that phrasing.
 _EQ_RE = re.compile(
-    r"(\d+)\s+(?:runs?\s+)?(?:needed\s+|required\s+|to\s+win\s+)?(?:off|from)\s+(\d+)"
+    r"(\d+)\s+(?:(?:runs?|more|still|needed|required|now|to\s+win|to\s+get)\s+)*"
+    r"(?:off|from)\s+(?:the\s+)?(?:last\s+|final\s+|remaining\s+)?(\d+)"
 )
 _EQ_CONTEXT = re.compile(r"need|requir|to\s+win|to\s+get|chase")
 _WORD_RE = re.compile(r"[a-z']+")
@@ -24,6 +27,46 @@ _NUMBER_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten"
 _FIGURES_BEFORE = re.compile(rf"(?:\d+|\b(?:{_NUMBER_WORDS}))\s+for\s+$")
 
 _WICKET_WORDS = frozenset({"bowled", "caught", "lbw", "stumped", "dismissed", "castled"})
+
+# Wicket-count claims, compared against the "/W" in the team score (which already
+# includes this ball). Ordinals are unambiguous; the cardinal "N down" form excludes
+# a shot played "down the ground/pitch" via the trailing direction lookahead.
+_ORDINAL = {
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "fourth": 4,
+    "fifth": 5,
+    "sixth": 6,
+    "seventh": 7,
+    "eighth": 8,
+    "ninth": 9,
+    "tenth": 10,
+}
+_CARDINAL = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+}
+_NTH_WICKET_RE = re.compile(
+    r"\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+"
+    r"(?:wicket|scalp|to\s+fall)\b"
+)
+_LOSE_NTH_RE = re.compile(
+    r"\blos(?:e|es|t|ing)\s+(?:their|its|his)\s+"
+    r"(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b"
+)
+_DOWN_RE = re.compile(
+    rf"\b(\d+|{_NUMBER_WORDS})\s+(?:wickets?\s+)?down\b"
+    r"(?!\s+(?:the|to|towards|over|past|into|at|and\s+out))"
+)
 
 
 @dataclass(frozen=True)
@@ -70,6 +113,19 @@ def _claims_boundary(line_lower: str, word: str) -> bool:
     return False
 
 
+def _claimed_wicket_count(line_lower: str) -> int | None:
+    """How many wickets the line claims have fallen, or ``None`` if it makes no claim."""
+    match = _DOWN_RE.search(line_lower)
+    if match:
+        token = match.group(1)
+        return int(token) if token.isdigit() else _CARDINAL.get(token)
+    for pattern in (_NTH_WICKET_RE, _LOSE_NTH_RE):
+        match = pattern.search(line_lower)
+        if match:
+            return _ORDINAL.get(match.group(1))
+    return None
+
+
 def faithfulness_check(line: str, event: str, state_string: str) -> FaithResult:
     """Flag a line that states or contradicts a hard fact not in event/state."""
     reasons: list[str] = []
@@ -102,6 +158,11 @@ def faithfulness_check(line: str, event: str, state_string: str) -> FaithResult:
     line_score, state_score = _score(line), _score(state_string)
     if line_score is not None and state_score is not None and line_score != state_score:
         reasons.append(f"score {line_score} != state {state_score}")
+
+    if state_score is not None:
+        claimed_wickets = _claimed_wicket_count(line_lower)
+        if claimed_wickets is not None and claimed_wickets != state_score[1]:
+            reasons.append(f"wickets {claimed_wickets} != state {state_score[1]}")
 
     line_need, state_need = _need(line), _need(state_string)
     if line_need is not None and state_need is not None and line_need != state_need:

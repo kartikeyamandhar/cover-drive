@@ -33,7 +33,8 @@ CACHE_MIN_TOKENS: dict[str, int] = {
 # Measured size of the cached few-shot prefix (system + seed), from a live
 # cache-write (usage.cache_creation_input_tokens). Far more accurate than a
 # chars/4 approximation. Re-measure and update when the seed changes.
-MEASURED_SEED_TOKENS = 7541
+# 7917 after the boundary prompt fix (state-is-after-the-ball rules); was 7541.
+MEASURED_SEED_TOKENS = 7917
 
 
 class StratBucket(BaseModel):

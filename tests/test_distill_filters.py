@@ -39,8 +39,9 @@ def test_wrong_score_and_equation_caught() -> None:
 
 
 def test_wickets_count_is_not_a_boundary() -> None:
-    # "six down" means six wickets, not a six off the bat
-    assert faithfulness_check("Hyderabad are six down and reeling.", "dot ball", _STATE).ok
+    # "six down" means six wickets, not a six off the bat (state agrees: 6 down)
+    state = "T20 IPL | Sunrisers Hyderabad 96/6 | need 60 off 30 | death"
+    assert faithfulness_check("Hyderabad are six down and reeling.", "dot ball", state).ok
 
 
 def test_batter_score_off_y_is_not_the_equation() -> None:
@@ -51,7 +52,7 @@ def test_batter_score_off_y_is_not_the_equation() -> None:
 
 
 def test_inside_six_overs_is_not_a_boundary() -> None:
-    state = "T20 IPL | Sunrisers Hyderabad 37/2 | need 118 off 87 | powerplay"
+    state = "T20 IPL | Sunrisers Hyderabad 37/3 | need 118 off 87 | powerplay"
     line = "Bowled him! Three down inside six and the chase is under pressure."
     assert faithfulness_check(line, "WICKET, bowled", state).ok
 
@@ -65,6 +66,48 @@ def test_for_four_wickets_is_not_a_boundary() -> None:
 def test_off_by_one_equation_is_caught() -> None:
     state = "T20 IPL | Pune Warriors 126/9 | need 48 off 8 | death"
     assert not faithfulness_check("They need 48 off 7 now.", "1 run", state).ok
+
+
+def test_equation_off_by_one_with_filler_phrasing_is_caught() -> None:
+    # the boundary-hunt residual: the teacher hides the off-by-one behind filler
+    state = "T20 IPL | CSK 134/6 | need 3 off 3 | death"
+    for line in (
+        "Nudged for one - 2 needed off the last 2 balls.",
+        "Deccan need just 2 more from 2 balls now.",
+        "Right on the doorstep: 2 needed now off the final 2.",
+    ):
+        assert not faithfulness_check(line, "1 run", state).ok, line
+
+
+def test_correct_equation_with_filler_phrasing_passes() -> None:
+    state = "T20 IPL | CSK 134/6 | need 3 off 3 | death"
+    assert faithfulness_check("Three needed off the last three, here we go.", "1 run", state).ok
+
+
+def test_wicket_count_off_by_one_is_caught() -> None:
+    # state shows the first wicket (inclusive); the line claims the second
+    state = "T20 IPL | Gujarat Titans 22/1 | need 141 off 107 | powerplay"
+    for line in (
+        "Bowled him! Gujarat lose their second inside the powerplay.",
+        "Trapped lbw - Gujarat are two down for 22 now.",
+        "Gone! That is the second wicket to fall.",
+    ):
+        assert not faithfulness_check(line, "WICKET, bowled", state).ok, line
+
+
+def test_correct_wicket_count_passes() -> None:
+    state = "T20 IPL | CSK 45/2 | CRR 7.9 | powerplay"
+    assert faithfulness_check(
+        "CSK lose their second, du Plessis departs.", "WICKET, caught", state
+    ).ok
+
+
+def test_shot_down_the_ground_is_not_a_wicket_claim() -> None:
+    # "six down the ground" is a shot, not six wickets
+    state = "T20 IPL | RCB 80/2 | powerplay"
+    assert faithfulness_check(
+        "Lofted six down the ground for a maximum!", "SIX off the bat", state
+    ).ok
 
 
 def test_all_seed_lines_are_faithful() -> None:
