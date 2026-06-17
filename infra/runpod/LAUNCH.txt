@@ -1,0 +1,56 @@
+PHASE 4 - RUNPOD LAUNCH GUIDE (Qwen2.5-1.5B QLoRA)
+===================================================
+The Mac is the control plane; the pod is the compute. Budget ~$9.50; this run costs
+well under $1. The #1 risk is leaving the pod running -- follow the teardown checklist.
+
+BEFORE YOU RENT (on the Mac, free, no GPU)
+------------------------------------------
+  uv run python -m scripts.train --check
+Confirms the data path: the Qwen chat template renders, the loss-mask marker is present,
+and token lengths fit max_seq_len. Do NOT rent a GPU until this passes.
+
+POD SPEC (pick the cheapest that fits)
+--------------------------------------
+- GPU:    one 24GB card, cheapest available. RTX 4090 / RTX A5000 / L4 (~$0.20-0.44/hr).
+          A 1.5B QLoRA over ~4k examples, 2 epochs, finishes in ~15-40 min.
+- Image:  a RunPod PyTorch CUDA template (e.g. runpod/pytorch:2.4.x-cu124). torch preinstalled.
+- Volume: a Network Volume mounted at /workspace (so HF_HOME persists base weights across pods).
+- Env:    HF_TOKEN = <WRITE-scoped token>   (required: pushes the adapter + GGUF)
+          WANDB_API_KEY = <key>              (optional: loss curves)
+
+ON THE POD
+----------
+  git clone <your repo>  &&  cd <repo>
+  bash infra/runpod/setup.sh        # installs unsloth/trl/... ; checks CUDA
+  export HF_TOKEN=...   # if not set as pod env
+  export WANDB_API_KEY=...           # optional
+  bash infra/runpod/run.sh          # trains; watch loss here + the W&B URL
+
+AFTER THE FIRST SUCCESSFUL RUN (reproducibility)
+------------------------------------------------
+The pod deps are pinned loosely (unsloth unpinned, trl>=0.16). On the first pod where
+setup.sh + run.sh succeed, capture the exact set and pin it before teardown:
+  pip freeze | grep -iE 'unsloth|^trl|transformers|peft|bitsandbytes|accelerate|datasets'
+Paste those == pins into infra/runpod/requirements-pod.txt and record them in
+docs/phases/phase-4.md, so a future teardown-and-relaunch is deterministic.
+NOTE: train.py auto-detects the TRL kwarg names (max_length vs max_seq_length,
+processing_class vs tokenizer), so it runs on either the new TRL API or Unsloth's
+shimmed old one without edits.
+
+ARTIFACTS PRODUCED (on the Hub)
+-------------------------------
+- adapter: kattymandy/cricket-commentary-qwen2.5-1.5b-lora   (LoRA weights, a few MB)
+- gguf:    kattymandy/cricket-commentary-qwen2.5-1.5b-gguf    (merged, q4_k_m, for Phase 6 serving)
+Record the final loss + these URLs in docs/phases/phase-4.md (phase log).
+
+TEARDOWN CHECKLIST (do every time)
+----------------------------------
+[ ] adapter + GGUF visible on the Hub
+[ ] STOP the pod in the RunPod console
+[ ] TERMINATE (delete) the pod -- "stopped" pods on some plans still bill for disk
+[ ] confirm the pod is gone from the console (do not trust that it stopped)
+[ ] the Network Volume can stay (it only caches base weights; cheap) or be deleted
+
+GATE (Phase 5, next)
+--------------------
+The model is not "done" until Phase 5 shows it beats base Qwen on faithfulness + style.

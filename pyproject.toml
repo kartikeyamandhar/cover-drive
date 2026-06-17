@@ -20,6 +20,11 @@ dev = [
   "pytest>=8.3,<9",
   "pytest-cov>=6.0,<7",
   "pre-commit>=4.0,<5",
+  # Control-plane only: the Qwen tokenizer for the no-GPU data-path check
+  # (app/train/dataset.py). The GPU stack (unsloth/torch/trl) installs on the pod
+  # via infra/runpod/requirements-pod.txt, never on the Mac.
+  "transformers>=4.46,<5",
+  "jinja2>=3.1,<4",  # transformers renders the chat template via Jinja
 ]
 
 [build-system]
@@ -80,6 +85,12 @@ init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 
+# GPU/ML libraries are untyped or pod-only; let strict mypy treat them as Any rather
+# than fail on missing stubs. The data path stays fully typed around them.
+[[tool.mypy.overrides]]
+module = ["transformers.*", "unsloth.*", "trl.*", "datasets.*", "torch.*", "wandb.*"]
+ignore_missing_imports = true
+
 # ---------------------------------------------------------------------------
 # pytest + coverage.
 # ---------------------------------------------------------------------------
@@ -93,6 +104,9 @@ addopts = "-q --cov=app --cov=configs --cov-report=term-missing --cov-fail-under
 [tool.coverage.run]
 branch = true
 source = ["app", "configs"]
+# app/train/train.py is the GPU pod entrypoint (unsloth/torch); it cannot run in CI
+# and is validated on the pod. The GPU-free data path (app/train/dataset.py) IS tested.
+omit = ["app/train/train.py"]
 
 [tool.coverage.report]
 show_missing = true

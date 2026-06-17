@@ -1,0 +1,16 @@
+# GPU stack, installed on the RunPod pod ONLY (needs CUDA). The Mac never installs these.
+# Start from a RunPod PyTorch CUDA image (torch already present); unsloth pins the rest.
+# NOTE: train.py targets the current TRL API (max_length + processing_class), which is
+# TRL >=0.16. If unsloth resolves an older trl and the run errors on those kwargs, pin
+# the exact pair from unsloth's release notes and record it in docs/phases/phase-4.md.
+unsloth
+trl>=0.16
+peft
+bitsandbytes
+accelerate
+datasets
+wandb
+# Repo runtime deps that unsloth does not provide:
+pydantic-settings>=2.6,<3
+structlog>=24.4,<25
+huggingface-hub>=0.25,<1
