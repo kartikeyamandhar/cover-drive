@@ -90,8 +90,8 @@ def bucket_of(record: BallRecord) -> str | None:
     return None
 
 
-def _scan_train_candidates(config: DistillConfig) -> dict[str, list[SampleCandidate]]:
-    """Bucket every train-split ball in the processed dataset."""
+def _scan_candidates(config: DistillConfig, split: Split) -> dict[str, list[SampleCandidate]]:
+    """Bucket every ball of the given split in the processed dataset."""
     by_bucket: dict[str, list[SampleCandidate]] = defaultdict(list)
     files = sorted(config.processed_dir.glob("*.jsonl"))
     for path in files:
@@ -100,7 +100,7 @@ def _scan_train_candidates(config: DistillConfig) -> dict[str, list[SampleCandid
             split_for_match(
                 match_id, val_fraction=config.val_fraction, test_fraction=config.test_fraction
             )
-            is not Split.TRAIN
+            is not split
         ):
             continue
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -122,13 +122,20 @@ def _scan_train_candidates(config: DistillConfig) -> dict[str, list[SampleCandid
     return by_bucket
 
 
-def stratified_sample(config: DistillConfig) -> list[SampleCandidate]:
-    """Select the primary persona's stratified set from training matches."""
-    by_bucket = _scan_train_candidates(config)
+def stratified_sample(
+    config: DistillConfig, *, split: Split = Split.TRAIN, set_size: int | None = None
+) -> list[SampleCandidate]:
+    """Select a stratified set from the given split (train by default).
+
+    ``set_size`` defaults to the configured primary size; pass a small value to
+    draw a held-out val/test set at the boundary.
+    """
+    by_bucket = _scan_candidates(config, split)
+    size = set_size if set_size is not None else config.primary_set_size
     rng = random.Random(config.sampling_seed)
     selected: list[SampleCandidate] = []
     for bucket in config.stratification():
-        target = round(bucket.target_fraction * config.primary_set_size)
+        target = round(bucket.target_fraction * size)
         pool = sorted(by_bucket.get(bucket.name, []), key=lambda c: (c.match_id, c.ball_id))
         take = min(target, len(pool))
         if take < target:

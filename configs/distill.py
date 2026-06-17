@@ -105,6 +105,11 @@ class DistillConfig(BaseModel):
         return self.data_dir / "distill"
 
     @property
+    def dataset_dir(self) -> Path:
+        """Where the assembled train/val/test SFT JSONL is written (git-ignored)."""
+        return self.data_dir / "dataset"
+
+    @property
     def manifest_path(self) -> Path:
         """Resumable generation state."""
         return self.distill_dir / "manifest.json"

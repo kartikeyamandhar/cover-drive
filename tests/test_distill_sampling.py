@@ -104,3 +104,17 @@ def test_stratified_sample_and_subset(tmp_path: Path) -> None:
     assert all(c.match_id == "sample_match" for c in primary)
     subset = secondary_subset(primary, fraction=0.5, seed=1)
     assert 0 < len(subset) <= len(primary)
+
+
+def test_stratified_sample_respects_split(tmp_path: Path) -> None:
+    from app.dataset.split import Split
+
+    processed = tmp_path / "data" / "processed"
+    processed.mkdir(parents=True)
+    build_match(FIXTURE, processed, FeatureConfig())
+    # val_fraction=test_fraction=0 -> the only match is TRAIN, so VAL/TEST draws are empty
+    config = DistillConfig(
+        data_dir=tmp_path / "data", val_fraction=0.0, test_fraction=0.0, primary_set_size=100
+    )
+    assert len(stratified_sample(config, split=Split.TRAIN)) > 0
+    assert stratified_sample(config, split=Split.VAL, set_size=50) == []
