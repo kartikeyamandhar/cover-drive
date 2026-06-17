@@ -34,8 +34,15 @@ class AssemblyStats:
 
 
 def read_pairs(config: DistillConfig) -> Iterator[dict[str, str]]:
-    """Yield every distill pair from ``data/distill/*.jsonl``."""
+    """Yield every distill pair from ``data/distill/*.jsonl``.
+
+    Skips bookkeeping files written into the same directory (e.g. the judge-filter's
+    ``judge_dropped.jsonl`` log): those hold the pairs that were DELETED, and reading
+    them back would silently re-admit the very defects the filter removed.
+    """
     for path in sorted(config.distill_dir.glob("*.jsonl")):
+        if path.name.startswith("judge_"):
+            continue
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 yield json.loads(line)

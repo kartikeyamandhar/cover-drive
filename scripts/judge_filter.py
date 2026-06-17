@@ -41,7 +41,10 @@ def main() -> None:
     parser.add_argument("--mode", choices=("sync", "batch"), default=None, help="run mode (live)")
     parser.add_argument("--model", type=str, default="claude-opus-4-8", help="judge model id")
     parser.add_argument("--workers", type=int, default=6, help="sync concurrency")
-    parser.add_argument("--budget", type=float, default=25.0, help="sync USD budget guard")
+    parser.add_argument("--budget", type=float, default=25.0, help="USD budget guard")
+    parser.add_argument(
+        "--chunk-size", type=int, default=500, help="batch chunk size (larger = fewer, faster)"
+    )
     parser.add_argument("--data-dir", type=Path, default=None, help="root data directory")
     parser.add_argument("--json-logs", action="store_true", help="emit JSON logs")
     args = parser.parse_args()
@@ -64,7 +67,9 @@ def main() -> None:
 
     client = _make_client()
     stats: JudgeFilterStats = (
-        judge_filter_batch(client, config, model=args.model, budget_usd=args.budget)
+        judge_filter_batch(
+            client, config, model=args.model, budget_usd=args.budget, chunk_size=args.chunk_size
+        )
         if args.mode == "batch"
         else judge_filter_sync(
             client, config, model=args.model, max_workers=args.workers, budget_usd=args.budget

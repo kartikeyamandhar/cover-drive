@@ -52,6 +52,12 @@ def main() -> None:
     parser.add_argument(
         "--primary-set-size", type=int, default=None, help="override primary persona set size"
     )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=500,
+        help="batch chunk size (larger = fewer, faster batches)",
+    )
     parser.add_argument("--json-logs", action="store_true", help="emit JSON logs")
     args = parser.parse_args()
 
@@ -77,7 +83,7 @@ def main() -> None:
         items = rng.sample(items, min(args.pilot, len(items)))
 
     stats: RunStats = (
-        run_batch(client, config, items)
+        run_batch(client, config, items, chunk_size=args.chunk_size)
         if args.mode == "batch"
         else run_sync(client, config, items)
     )

@@ -69,6 +69,24 @@ def test_assemble_is_deterministic(tmp_path: Path) -> None:
     assert first == second
 
 
+def test_assemble_ignores_judge_dropped_log(tmp_path: Path) -> None:
+    # the judge-filter writes judge_dropped.jsonl into data/distill; assemble must NOT
+    # read it back, or the very defects the filter removed re-enter the training set.
+    config = DistillConfig(data_dir=tmp_path / "data")
+    _write_pairs(config, [_pair("matchA", "0-0-1", "broadcast")])
+    (config.distill_dir / "judge_dropped.jsonl").write_text(
+        json.dumps(_pair("matchA", "0-0-9", "broadcast")) + "\n", encoding="utf-8"
+    )
+    stats = assemble(config)
+    assert stats.total == 1  # only the kept pair, not the dropped one
+    split = split_of(config, "matchA")
+    balls = {
+        json.loads(line)["ball_id"]
+        for line in (config.dataset_dir / f"{split}.jsonl").read_text(encoding="utf-8").splitlines()
+    }
+    assert balls == {"0-0-1"}
+
+
 def test_stats_file_written(tmp_path: Path) -> None:
     config = DistillConfig(data_dir=tmp_path / "data")
     _write_pairs(config, [_pair("matchA", "0-0-1", "broadcast")])

@@ -38,11 +38,59 @@ HIGH_RISK_BUCKETS: frozenset[str] = frozenset(
 _DROPPED_FILE = "judge_dropped.jsonl"
 
 # Measured cached prefix (rubric + tools) for the Opus judge, from count_tokens.
-# Reads at 0.1x once warm; the volatile per-pair turn and the forced-tool output are
-# small. Used only for the dry-run cost projection.
+# Reads at 0.1x once warm; the volatile per-pair turn and the forced-tool output.
+# Output was MEASURED at ~230 tokens on a real 3,119-pair run (the forced verdict +
+# explanation), not the 95 first guessed -- that 2.4x miss caused a budget overrun,
+# so the estimate and the guard below are now keyed off the measured value.
 MEASURED_JUDGE_PREFIX_TOKENS = 4830
 _JUDGE_VOLATILE_TOKENS = 280
-_JUDGE_OUTPUT_TOKENS = 95
+_JUDGE_OUTPUT_TOKENS = 230
+
+
+def per_pair_cost(model: str = "claude-opus-4-8", *, batch: bool = True) -> float:
+    """Marginal USD cost of judging ONE more pair (cache-warm), excluding the one-off
+    cache write. This is what the budget guard divides by to stay solvent."""
+    in_price, out_price = PRICING[model]
+    mult = 0.5 if batch else 1.0
+    read = MEASURED_JUDGE_PREFIX_TOKENS * 0.1 * in_price
+    volatile = _JUDGE_VOLATILE_TOKENS * in_price
+    output = _JUDGE_OUTPUT_TOKENS * out_price
+    return (read + volatile + output) / 1e6 * mult
+
+
+# Risk order for budget-capped runs: when the budget cannot cover every high-risk
+# pair, judge the highest-defect strata first (round-1 defect rates), so each dollar
+# removes the most defects. Buckets not listed sort last.
+_BUCKET_PRIORITY: tuple[str, ...] = (
+    "tight_finish",
+    "six",
+    "batter_milestone",
+    "wicket",
+    "four",
+    "death_chase_pressure",
+)
+
+
+def _affordable_targets(
+    targets: list[tuple[int, _Pair]], *, budget_usd: float, model: str, batch: bool
+) -> tuple[list[tuple[int, _Pair]], int]:
+    """Risk-rank the targets and keep only as many as the budget can judge.
+
+    Returns (kept, n_skipped). Guards against a single large batch blowing the cap:
+    the cap is enforced BEFORE submission by the count, not only between chunks.
+    """
+    marginal = per_pair_cost(model, batch=batch)
+    write = MEASURED_JUDGE_PREFIX_TOKENS * 2.0 * PRICING[model][0] / 1e6
+    affordable = int(max(0.0, budget_usd - write) / marginal) if marginal else len(targets)
+    if affordable >= len(targets):
+        return targets, 0
+    ranked = sorted(
+        targets,
+        key=lambda t: _BUCKET_PRIORITY.index(t[1].data.get("bucket", ""))
+        if t[1].data.get("bucket", "") in _BUCKET_PRIORITY
+        else len(_BUCKET_PRIORITY),
+    )
+    return ranked[:affordable], len(targets) - affordable
 
 
 @dataclass
@@ -55,6 +103,7 @@ class JudgeFilterStats:
     kept: int = 0
     dropped: int = 0
     judge_failed: int = 0
+    skipped_budget: int = 0
     spend_usd: float = 0.0
 
 
@@ -159,6 +208,10 @@ def judge_filter_sync(
     pairs = _load_pairs(config)
     targets = [(i, p) for i, p in enumerate(pairs) if is_high_risk(p.data, buckets)]
     stats = JudgeFilterStats(pairs=len(pairs), high_risk=len(targets))
+    targets, skipped = _affordable_targets(targets, budget_usd=budget_usd, model=model, batch=False)
+    stats.skipped_budget = skipped
+    if skipped:
+        log.warning("judge-filter capped to budget (risk-ranked)", skipped=skipped)
     drop_ids: set[int] = set()
     dropped_log: list[dict[str, str]] = []
 
@@ -223,6 +276,10 @@ def judge_filter_batch(
     pairs = _load_pairs(config)
     targets = [(i, p) for i, p in enumerate(pairs) if is_high_risk(p.data, buckets)]
     stats = JudgeFilterStats(pairs=len(pairs), high_risk=len(targets))
+    targets, skipped = _affordable_targets(targets, budget_usd=budget_usd, model=model, batch=True)
+    stats.skipped_budget = skipped
+    if skipped:
+        log.warning("judge-filter capped to budget (risk-ranked)", skipped=skipped)
     drop_ids: set[int] = set()
     dropped_log: list[dict[str, str]] = []
     in_price, out_price = PRICING[model]
