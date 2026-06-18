@@ -103,6 +103,11 @@ make serve ARGS="--stub"      # 1. start the API with a stub runtime (no model n
 cd web && pnpm install && pnpm dev   # 2. then open http://localhost:3000, press play
 ```
 
+Teams render as colored monogram crests by default (no trademarked logos are bundled). To
+use real artwork you have the right to use, drop `web/public/teams/<CODE>.png` files (codes
+like `CSK`, `RCB`, `SRH`) and set `NEXT_PUBLIC_TEAM_LOGOS=1`; the badge renders the image and
+falls back to the crest if a file is missing.
+
 ## Status
 
 The fine-tune is trained and has passed the Phase 5 training gate (it beats the base
