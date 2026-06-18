@@ -123,36 +123,36 @@ def run_train(config: TrainConfig) -> None:
     # runs on either API without a first-run TypeError that would waste GPU minutes.
     seq_kw = _accepted_kwarg(SFTConfig, "max_length", "max_seq_length")
     tok_kw = _accepted_kwarg(SFTTrainer, "processing_class", "tokenizer")
-    sft_args = SFTConfig(
-        dataset_text_field="text",
-        per_device_train_batch_size=config.per_device_batch,
-        gradient_accumulation_steps=config.grad_accum,
-        warmup_ratio=config.warmup_ratio,
-        num_train_epochs=config.epochs,
-        learning_rate=config.learning_rate,
-        logging_steps=5,
-        eval_strategy="epoch" if eval_ds is not None else "no",
+    sft_kwargs: dict[str, object] = {
+        "dataset_text_field": "text",
+        "per_device_train_batch_size": config.per_device_batch,
+        "gradient_accumulation_steps": config.grad_accum,
+        "warmup_ratio": config.warmup_ratio,
+        "num_train_epochs": config.epochs,
+        "learning_rate": config.learning_rate,
+        "logging_steps": 5,
+        "eval_strategy": "epoch" if eval_ds is not None else "no",
         # Keep each epoch's checkpoint and restore the best one, so an over-trained final
         # epoch (a real risk on 4k narrow-domain examples) is recoverable.
-        save_strategy="epoch" if eval_ds is not None else "no",
-        load_best_model_at_end=eval_ds is not None,
-        metric_for_best_model="eval_loss",
-        save_total_limit=2,
-        optim="adamw_8bit",
-        weight_decay=config.weight_decay,
-        lr_scheduler_type=config.lr_scheduler,
-        seed=config.seed,
-        output_dir=str(config.output_dir),
-        report_to=report_to,
-        **{seq_kw: config.max_seq_len},
-    )
-    # The 4-bit repo lacks an eos token, so SFTConfig keeps a '<EOS_TOKEN>' sentinel that
-    # SFTTrainer rejects. Force the real Qwen eos onto the config object AFTER construction --
-    # works whether this TRL version exposes eos_token as an init arg, a field, or an attribute.
+        "save_strategy": "epoch" if eval_ds is not None else "no",
+        "load_best_model_at_end": eval_ds is not None,
+        "metric_for_best_model": "eval_loss",
+        "save_total_limit": 2,
+        "optim": "adamw_8bit",
+        "weight_decay": config.weight_decay,
+        "lr_scheduler_type": config.lr_scheduler,
+        "seed": config.seed,
+        "output_dir": str(config.output_dir),
+        "report_to": report_to,
+        seq_kw: config.max_seq_len,
+    }
+    # TRL/Unsloth turns a None eos_token into a '<EOS_TOKEN>' placeholder it then rejects.
+    # Passing the real Qwen eos into the CONSTRUCTOR sticks (a post-hoc setattr does not
+    # survive SFTTrainer's arg processing). Guard for an older TRL that lacks the arg.
     try:
-        sft_args.eos_token = QWEN_EOS_TOKEN
-    except Exception as exc:  # config is not frozen; never block training over this
-        log.warning("could not set eos_token on SFTConfig", error=str(exc))
+        sft_args = SFTConfig(eos_token=QWEN_EOS_TOKEN, **sft_kwargs)
+    except TypeError:
+        sft_args = SFTConfig(**sft_kwargs)
     trainer = SFTTrainer(
         model=model,
         train_dataset=train_ds,
