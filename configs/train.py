@@ -13,10 +13,13 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 
 # Decided in Phase 4 (ADR 0007): Qwen2.5-1.5B for budget, training speed, and demo
-# latency. 3B is the fallback if the model fails the Phase 5 gate. The Unsloth 4-bit
-# repo downloads fast; the tokenizer (chat template) is loaded from the canonical repo
-# so it is always available on the Mac for the no-GPU data-path check.
-DEFAULT_BASE_MODEL = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
+# latency. 3B is the fallback if the model fails the Phase 5 gate.
+# NOTE: we use the CANONICAL repo, not unsloth/...-bnb-4bit. The 4-bit repo ships a
+# broken tokenizer config (eos_token = the literal '<EOS_TOKEN>', no pad token), which
+# TRL 0.24 rejects. The canonical repo has a complete config (eos = <|im_end|>) and
+# Unsloth still quantizes it to 4-bit on load (load_in_4bit=True) -- a ~3GB one-time
+# download, cached on the network volume.
+DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
 DEFAULT_TOKENIZER = "Qwen/Qwen2.5-1.5B-Instruct"
 
 # Qwen2.5 ChatML markers, used by TRL's train_on_responses_only to mask the loss to
