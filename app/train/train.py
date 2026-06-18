@@ -170,7 +170,7 @@ def run_train(config: TrainConfig) -> None:
                 out[key] = value
         return out
 
-    type(sft_args).to_dict = _to_dict_keep_tokens  # type: ignore[method-assign]
+    type(sft_args).to_dict = _to_dict_keep_tokens
 
     trainer = SFTTrainer(
         model=model,
