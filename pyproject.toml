@@ -91,7 +91,16 @@ warn_required_dynamic_aliases = true
 # GPU/ML libraries are untyped or pod-only; let strict mypy treat them as Any rather
 # than fail on missing stubs. The data path stays fully typed around them.
 [[tool.mypy.overrides]]
-module = ["transformers.*", "unsloth.*", "trl.*", "datasets.*", "torch.*", "wandb.*", "peft.*"]
+module = [
+  "transformers.*",
+  "unsloth.*",
+  "trl.*",
+  "datasets.*",
+  "torch.*",
+  "wandb.*",
+  "peft.*",
+  "llama_cpp.*",
+]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------
@@ -111,7 +120,11 @@ source = ["app", "configs"]
 # and is validated on the pod. The GPU-free data path (app/train/dataset.py) IS tested.
 # app/serve/transformers_runtime.py loads torch + the model; it runs only on a serving
 # host (opt-in), never in CI. The whole service is tested via the StubRuntime instead.
-omit = ["app/train/train.py", "app/serve/transformers_runtime.py"]
+omit = [
+  "app/train/train.py",
+  "app/serve/transformers_runtime.py",
+  "app/serve/llama_runtime.py",
+]
 
 [tool.coverage.report]
 show_missing = true

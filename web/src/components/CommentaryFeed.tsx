@@ -27,8 +27,21 @@ export function CommentaryFeed({ balls, cursor, live }: Props) {
   if (cursor < 0) {
     return (
       <div className={styles.empty}>
-        <p className={styles.emptyTitle}>No commentary yet</p>
-        <p className={styles.emptyHint}>Press play to start the replay.</p>
+        {live ? (
+          <>
+            <span className={styles.warming} aria-hidden="true" />
+            <p className={styles.emptyTitle}>Waking the commentator…</p>
+            <p className={styles.emptyHint}>
+              The fine-tuned model is spinning up, so the first ball can take a few seconds on the
+              free CPU.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className={styles.emptyTitle}>No commentary yet</p>
+            <p className={styles.emptyHint}>Press play to start the replay.</p>
+          </>
+        )}
       </div>
     );
   }

@@ -23,9 +23,13 @@ from configs.serve import ServeConfig
 _STUB_LINE = "A good ball, well played."
 
 
-def _build_runtime(stub: bool, config: ServeConfig) -> RuntimeAdapter:
-    if stub:
+def _build_runtime(kind: str, config: ServeConfig) -> RuntimeAdapter:
+    if kind == "stub":
         return StubRuntime(_STUB_LINE)
+    if kind == "llama":
+        from app.serve.llama_runtime import LlamaCppRuntime
+
+        return LlamaCppRuntime(config)
     from app.serve.transformers_runtime import TransformersPeftRuntime
 
     return TransformersPeftRuntime(config)
@@ -54,6 +58,7 @@ def _smoke(config: ServeConfig, persona_key: str, limit: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="cricket commentary serving")
     parser.add_argument("--stub", action="store_true", help="serve with the stub runtime")
+    parser.add_argument("--llama", action="store_true", help="serve the GGUF via llama.cpp (CPU)")
     parser.add_argument("--smoke", action="store_true", help="stream one match to stdout and exit")
     parser.add_argument("--persona", default="broadcast")
     parser.add_argument("--limit", type=int, default=6)
@@ -68,7 +73,8 @@ def main() -> None:
 
     import uvicorn
 
-    runtime = _build_runtime(args.stub, config)
+    kind = "stub" if args.stub else "llama" if args.llama else "transformers"
+    runtime = _build_runtime(kind, config)
     app = create_app(runtime=runtime, repository=_repo(config), config=config)
     uvicorn.run(app, host=args.host, port=args.port)
 

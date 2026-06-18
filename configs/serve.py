@@ -36,6 +36,12 @@ class ServeConfig(BaseModel):
     device: str = "auto"
     load_in_4bit_on_cuda: bool = True
 
+    # CPU serving via a quantized GGUF (the Hugging Face Space, llama-cpp-python).
+    gguf_repo: str = "kattymandy/cricket-commentary-qwen2.5-1.5b-gguf"
+    gguf_file: str = "Qwen2.5-1.5B-Instruct.Q4_K_M.gguf"
+    llama_ctx: int = 1024
+    llama_threads: int = 4
+
     # Decoding (one short line of commentary).
     max_new_tokens: int = 80
     temperature: float = 0.7
