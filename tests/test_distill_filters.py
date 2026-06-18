@@ -110,6 +110,70 @@ def test_shot_down_the_ground_is_not_a_wicket_claim() -> None:
     ).ok
 
 
+def test_run_rate_six_an_over_is_not_a_boundary() -> None:
+    # Phase 5 audit FP: "six an over" is a run/required rate, not a six off the bat.
+    state = "T20 IPL | Delhi Capitals 38/1 | need 90 off 93 | powerplay"
+    line = (
+        "First-ball breakthrough, Shaw goes for 13 and Delhi are 38/1, "
+        "needing 90 off 93 with the rate still below six an over."
+    )
+    assert faithfulness_check(line, "WICKET, bowled", state).ok
+
+
+def test_balls_remaining_six_balls_is_not_a_boundary() -> None:
+    # Phase 5 audit FP: "six balls" is the balls remaining, not a six.
+    state = "T20 IPL | Mumbai Indians 121/3 | need 7 off 6 | death"
+    line = "Nudged into the leg side for one, Mumbai still need seven from six balls now."
+    assert faithfulness_check(line, "1 run", state).ok
+
+
+def test_four_balls_count_is_not_a_boundary() -> None:
+    # Phase 5 audit FP: event is a six; "four balls" is a ball count, not a four.
+    state = "T20 IPL | Deccan Chargers 22/0 | powerplay"
+    line = "Sent soaring for six more, Deccan flying at 22/0 after just four balls!"
+    assert faithfulness_check(line, "SIX off the bat", state).ok
+
+
+def test_first_six_powerplay_is_not_a_boundary() -> None:
+    # Phase 5 audit FP: event is a four; "the first six" is the first six overs.
+    state = "T20 IPL | Rajasthan Royals 103/2 | CRR 8.5 | middle"
+    line = (
+        "He took two on the trot at the end of the first six to build his platform, "
+        "and that four keeps Rajasthan ticking along at 103/2."
+    )
+    assert faithfulness_check(line, "FOUR off the bat", state).ok
+
+
+def test_bowler_tally_nth_wicket_is_not_a_team_count() -> None:
+    # Phase 5 audit FP: "second wicket from Verma" is the bowler's tally, not 2 down.
+    state = "T20 IPL | Sunrisers Hyderabad 112/4 | CRR 11.2 | middle"
+    line = (
+        "Overton has two for eight, and that second wicket from Verma was the last straw "
+        "as SRH fall to 112/4 at the end of the tenth."
+    )
+    assert faithfulness_check(line, "WICKET, caught", state).ok
+
+
+def test_nth_wicket_partnership_is_not_a_team_count() -> None:
+    # Phase 5 audit FP: "second wicket partnership" is the batting stand, not 2 down.
+    state = "T20 IPL | Mumbai Indians 100/3 | CRR 8.0 | middle"
+    line = (
+        "Steyn has two for twenty, and that second-wicket partnership of fifty-one is now "
+        "gone as Mumbai close out on 100/3."
+    )
+    assert faithfulness_check(line, "WICKET, caught", state).ok
+
+
+def test_real_nth_wicket_to_fall_still_caught() -> None:
+    # Guard: tightening _NTH_WICKET_RE must NOT stop catching a genuine team-count claim.
+    state = "T20 IPL | Gujarat Titans 22/1 | need 141 off 107 | powerplay"
+    for line in (
+        "Gone! That is the third wicket to fall.",
+        "Bowled him, Gujarat are now three wickets down.",
+    ):
+        assert not faithfulness_check(line, "WICKET, bowled", state).ok, line
+
+
 def test_all_seed_lines_are_faithful() -> None:
     for exemplar in EXEMPLARS:
         for line in exemplar.lines.values():

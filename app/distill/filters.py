@@ -25,6 +25,15 @@ _EQ_CONTEXT = re.compile(r"need|requir|to\s+win|to\s+get|chase")
 _WORD_RE = re.compile(r"[a-z']+")
 _NUMBER_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten"
 _FIGURES_BEFORE = re.compile(rf"(?:\d+|\b(?:{_NUMBER_WORDS}))\s+for\s+$")
+# Non-boundary uses of "four"/"six" that FOLLOW the word: a wicket/over/ball count, a
+# bowling figure, or a run/required rate ('six down', 'six overs', 'six balls', 'six
+# for 24', 'six an over', 'four runs an over').
+_BOUNDARY_AFTER_RE = re.compile(
+    r"\s+(?:down|wickets?|overs?|balls?|for\b|(?:runs?\s+)?(?:an|per)\s+overs?)"
+)
+# Non-boundary uses that PRECEDE the word: 'inside six', 'over six', 'the first six'
+# (the first six overs / the powerplay).
+_BOUNDARY_BEFORE_RE = re.compile(r"(?:inside|over|first|final|last|opening)\s+$")
 
 _WICKET_WORDS = frozenset({"bowled", "caught", "lbw", "stumped", "dismissed", "castled"})
 
@@ -55,9 +64,13 @@ _CARDINAL = {
     "nine": 9,
     "ten": 10,
 }
+# A team wicket-count claim needs a falling context ("third wicket to fall", "third
+# wicket down", "third to fall"). The bare "Nth wicket" is ambiguous: it is far more
+# often a bowler's running tally ("his second wicket from that over") or the batting
+# partnership term ("the second-wicket partnership"), neither of which is a team count.
 _NTH_WICKET_RE = re.compile(
     r"\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+"
-    r"(?:wicket|scalp|to\s+fall)\b"
+    r"(?:wickets?\s+(?:to\s+fall|down)|to\s+fall)\b"
 )
 _LOSE_NTH_RE = re.compile(
     r"\blos(?:e|es|t|ing)\s+(?:their|its|his)\s+"
@@ -99,12 +112,12 @@ def _claims_boundary(line_lower: str, word: str) -> bool:
     figures ('two for six'), and a score fragment ('162/4 ... four').
     """
     for match in re.finditer(rf"\b{word}\b", line_lower):
-        after = line_lower[match.end() : match.end() + 9]
+        after = line_lower[match.end() : match.end() + 16]
         before = line_lower[max(0, match.start() - 18) : match.start()]
-        if re.match(r"\s+(?:down|wickets?|overs?|for\b)", after):
-            continue  # 'six down' / 'four wickets' / 'six overs' / 'six for 24'
-        if re.search(r"(?:inside|over)\s+$", before):
-            continue  # 'inside six' / 'over six'
+        if _BOUNDARY_AFTER_RE.match(after):
+            continue
+        if _BOUNDARY_BEFORE_RE.search(before):
+            continue
         if _FIGURES_BEFORE.search(before):
             continue  # '55 for four' / 'two for six'
         if re.search(r"\d\s*/\s*$", before):
