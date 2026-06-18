@@ -13,10 +13,8 @@ echo ">> build tools (only needed if you later enable the GGUF export; best-effo
 (apt-get update -qq && apt-get install -y -qq build-essential cmake git) || \
   echo "   (apt unavailable; fine unless you enable push_gguf, which builds llama.cpp)"
 
-echo ">> clearing any preview torch/unsloth so the torch-matched build installs clean..."
-pip uninstall -y -q torch torchvision torchaudio unsloth unsloth_zoo trl xformers 2>/dev/null || true
-
-echo ">> installing GPU + repo deps (unsloth pinned to the image's torch 2.4.1+cu124)..."
+echo ">> installing GPU + repo deps..."
+echo ">> (use an Unsloth-official template/Colab so torch matches Unsloth's kernels)"
 pip install -q --upgrade pip
 pip install -q -r infra/runpod/requirements-pod.txt
 

@@ -1,11 +1,13 @@
 # GPU stack, installed on the RunPod pod ONLY (needs CUDA). The Mac never installs these.
-# IMPORTANT: a plain `unsloth` install pulls the LATEST torch (a 2.10 preview that wants
-# 2.11), which mismatches the RunPod cu124 image's stable torch 2.4.1. That mismatch makes
-# Unsloth skip its cpp extensions and fall back to a Python path whose tokenizer can't be
-# pickled by datasets ('cannot pickle ConfigModuleInstance'). The torch-matched Unsloth
-# build keeps torch at the image's 2.4.1+cu124 and the whole stack coherent. train.py is
-# robust to the TRL version unsloth pulls (it auto-detects the kwarg names).
-unsloth[cu124-torch240]
+#
+# USE A COHERENT, TESTED ENVIRONMENT (an Unsloth-official RunPod template or Unsloth's
+# Colab). On a generic PyTorch image, a plain `unsloth` install pulls a torch preview that
+# Unsloth's compiled kernels do not match -> it falls back to a Python path whose tokenizer
+# cannot be pickled by `datasets` ('cannot pickle ConfigModuleInstance'), which blocks the
+# tokenization step. The token/to_dict fixes in app/train/train.py are still required on any
+# stack; only the torch<->unsloth kernel coherence needs the tested image.
+unsloth
+trl
 peft
 bitsandbytes
 accelerate
