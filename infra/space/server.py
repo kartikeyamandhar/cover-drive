@@ -22,8 +22,18 @@ from configs.serve import ServeConfig
 BALL_DATA_REPO = os.environ.get("BALL_DATA_REPO", "kattymandy/cricket-commentary-ball-data")
 CORS_ORIGIN = os.environ.get("CORS_ORIGIN", "*")
 
+# Free-Space tuning (override via Space Variables): match threads to the 2-vCPU box (more
+# oversubscribes and can stall/crash it), and keep lines short so each request finishes fast.
+_THREADS = int(os.environ.get("LLAMA_THREADS", "2"))
+_MAX_TOKENS = int(os.environ.get("MAX_NEW_TOKENS", "64"))
+
 _data_dir = Path(snapshot_download(BALL_DATA_REPO, repo_type="dataset"))
-_config = ServeConfig(processed_dir=_data_dir, cors_origins=(CORS_ORIGIN,))
+_config = ServeConfig(
+    processed_dir=_data_dir,
+    cors_origins=(CORS_ORIGIN,),
+    llama_threads=_THREADS,
+    max_new_tokens=_MAX_TOKENS,
+)
 app = create_app(
     runtime=LlamaCppRuntime(_config),
     repository=MatchRepository(_data_dir),
