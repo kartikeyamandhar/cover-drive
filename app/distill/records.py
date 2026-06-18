@@ -71,21 +71,37 @@ def has_real_wicket(record: BallRecord) -> bool:
     return any(w.kind not in NON_DISMISSAL_KINDS for w in record.delivery.wickets)
 
 
+def delivery_event(
+    *, runs_batter: int, runs_total: int, extras: dict[str, int], wicket_kinds: list[str]
+) -> str:
+    """The short factual phrase for a delivery, from its raw outcome fields.
+
+    The single source of truth for the BALL: event, shared by distillation
+    (``ball_event``) and serving (``app.serve.ball.ServeBall.event``) so the prompt
+    the student is served is byte-identical to the prompt it was trained on.
+    """
+    real = [k for k in wicket_kinds if k not in NON_DISMISSAL_KINDS]
+    if real:
+        return f"WICKET, {real[0]}"
+    if runs_batter == 6:
+        return "SIX off the bat"
+    if runs_batter == 4:
+        return "FOUR off the bat"
+    if extras.get("wides"):
+        return "wide"
+    if extras.get("noballs"):
+        return "no-ball"
+    if runs_total == 0:
+        return "dot ball"
+    return f"{runs_total} run" if runs_total == 1 else f"{runs_total} runs"
+
+
 def ball_event(record: BallRecord) -> str:
     """A short factual phrase for what just happened on this ball (no color)."""
-    real = [w for w in record.delivery.wickets if w.kind not in NON_DISMISSAL_KINDS]
-    if real:
-        return f"WICKET, {real[0].kind}"
     delivery = record.delivery
-    if delivery.runs_batter == 6:
-        return "SIX off the bat"
-    if delivery.runs_batter == 4:
-        return "FOUR off the bat"
-    if delivery.extras.get("wides"):
-        return "wide"
-    if delivery.extras.get("noballs"):
-        return "no-ball"
-    if delivery.runs_total == 0:
-        return "dot ball"
-    runs = delivery.runs_total
-    return f"{runs} run" if runs == 1 else f"{runs} runs"
+    return delivery_event(
+        runs_batter=delivery.runs_batter,
+        runs_total=delivery.runs_total,
+        extras=delivery.extras,
+        wicket_kinds=[w.kind for w in delivery.wickets],
+    )

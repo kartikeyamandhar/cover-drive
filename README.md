@@ -62,12 +62,32 @@ make web-check        # web: install + lint + build
 Both gates also run in CI on every push and pull request
 (`.github/workflows/ci.yml`).
 
+## Serving
+
+The serving layer replays a bundled match ball by ball and streams commentary over
+Server-Sent Events. It holds the model behind a runtime seam, renders every displayed
+fact from the structured record, and validates each generated line against that ground
+truth, substituting a deterministic, faithful line if a draw ever contradicts the facts.
+A line that misstates a fact never reaches the client.
+
+```bash
+make serve-smoke              # headless: stream one bundled match to stdout (no model, no GPU)
+make serve ARGS="--stub"      # run the API with a stub runtime (no model) for frontend dev
+make serve                    # run the API with the real model (transformers + peft)
+```
+
+Endpoints: `GET /matches`, `GET /matches/{id}`, `GET /personas`, and the replay stream
+`GET /matches/{id}/stream?persona=broadcast` (SSE: a `state` event per delivery, then
+`token` events, then a `ball` event with the validated line and its provenance).
+
 ## Status
 
-Phase 0 (scaffolding and environment) is the current foundation. The project is
-built in gated phases: phases 1 to 5 establish a fine-tune that beats the base
-model on a faithfulness-and-style gate, and only then do phases 6 to 8 build the
-serving layer, the web app, and the deployment around it.
+The fine-tune is trained and has passed the Phase 5 training gate (it beats the base
+model on faithfulness with margin, with healthy diversity), and the Phase 6 serving
+layer is built. The project is built in gated phases: phases 1 to 5 establish a
+fine-tune that beats the base model on a faithfulness-and-style gate; phases 6 to 8 build
+the serving layer, the web app, and the deployment around it. Next: the Next.js replay
+app (Phase 7).
 
 ## License
 

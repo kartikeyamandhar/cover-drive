@@ -2,7 +2,7 @@
 # All Python tooling runs through `uv run` so the locked versions are used.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup lint format type test check web-check pipeline clean
+.PHONY: help setup lint format type test check web-check pipeline serve serve-smoke clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -33,6 +33,12 @@ web-check:  ## Web gate: install + lint + build
 
 pipeline:  ## Placeholder for the data/training pipeline (implemented from Phase 1)
 	@echo "pipeline: no stages yet; implemented from Phase 1."
+
+serve:  ## Serve the model locally (transformers + peft); add ARGS="--stub" for no model
+	uv run python -m scripts.serve $(ARGS)
+
+serve-smoke:  ## Headless: stream one bundled match to stdout (stub runtime, no GPU)
+	uv run python -m scripts.serve --smoke
 
 clean:  ## Remove caches and build artifacts
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage coverage.xml htmlcov dist build
