@@ -24,6 +24,12 @@ DEFAULT_TOKENIZER = "Qwen/Qwen2.5-1.5B-Instruct"
 QWEN_INSTRUCTION_PART = "<|im_start|>user\n"
 QWEN_RESPONSE_PART = "<|im_start|>assistant\n"
 
+# Special tokens. The 4-bit repo's special-token config is incomplete, so pin these:
+# the chat template ends each turn with <|im_end|> (the real eos); <|endoftext|> is a
+# valid base-vocab token used for padding. Both are in vocab (no embedding resize).
+QWEN_EOS_TOKEN = "<|im_end|>"
+QWEN_PAD_TOKEN = "<|endoftext|>"
+
 
 class TrainConfig(BaseModel):
     """QLoRA fine-tune configuration for Qwen2.5."""

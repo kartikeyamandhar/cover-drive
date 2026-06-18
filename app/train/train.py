@@ -16,7 +16,13 @@ import structlog
 
 from app.train.dataset import CheckSummary, check, load_examples, split_for_monitoring
 from configs.settings import get_settings
-from configs.train import QWEN_INSTRUCTION_PART, QWEN_RESPONSE_PART, TrainConfig
+from configs.train import (
+    QWEN_EOS_TOKEN,
+    QWEN_INSTRUCTION_PART,
+    QWEN_PAD_TOKEN,
+    QWEN_RESPONSE_PART,
+    TrainConfig,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -85,6 +91,12 @@ def run_train(config: TrainConfig) -> None:
         load_in_4bit=True,
         dtype=None,
     )
+    # The 4-bit repo ships an incomplete special-token config (no pad token; TRL's SFTConfig
+    # then defaults eos to a '<EOS_TOKEN>' sentinel and rejects it). The Qwen2.5 chat template
+    # ends every turn with <|im_end|>, so that IS the eos; pin the real tokens.
+    tokenizer.eos_token = QWEN_EOS_TOKEN
+    if tokenizer.pad_token is None or tokenizer.pad_token == tokenizer.eos_token:
+        tokenizer.pad_token = QWEN_PAD_TOKEN
     model = FastLanguageModel.get_peft_model(
         model,
         r=config.lora_r,
@@ -109,8 +121,15 @@ def run_train(config: TrainConfig) -> None:
     # processing_class) and Unsloth shims the OLD names on new TRL. Reviewers disagreed on
     # which is correct, so pick whichever the INSTALLED version actually accepts -- this
     # runs on either API without a first-run TypeError that would waste GPU minutes.
+    import inspect
+
     seq_kw = _accepted_kwarg(SFTConfig, "max_length", "max_seq_length")
     tok_kw = _accepted_kwarg(SFTTrainer, "processing_class", "tokenizer")
+    extra: dict[str, object] = {seq_kw: config.max_seq_len}
+    # Recent TRL SFTConfig has an `eos_token` whose sentinel default the 4-bit repo trips;
+    # set it explicitly to the real Qwen eos when the field exists.
+    if "eos_token" in inspect.signature(SFTConfig).parameters:
+        extra["eos_token"] = QWEN_EOS_TOKEN
     sft_args = SFTConfig(
         dataset_text_field="text",
         per_device_train_batch_size=config.per_device_batch,
@@ -132,7 +151,7 @@ def run_train(config: TrainConfig) -> None:
         seed=config.seed,
         output_dir=str(config.output_dir),
         report_to=report_to,
-        **{seq_kw: config.max_seq_len},
+        **extra,
     )
     trainer = SFTTrainer(
         model=model,
