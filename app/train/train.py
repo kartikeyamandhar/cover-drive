@@ -95,8 +95,10 @@ def run_train(config: TrainConfig) -> None:
     # then defaults eos to a '<EOS_TOKEN>' sentinel and rejects it). The Qwen2.5 chat template
     # ends every turn with <|im_end|>, so that IS the eos; pin the real tokens.
     tokenizer.eos_token = QWEN_EOS_TOKEN
-    if tokenizer.pad_token is None or tokenizer.pad_token == tokenizer.eos_token:
-        tokenizer.pad_token = QWEN_PAD_TOKEN
+    # Force a REAL base-vocab pad token. Unsloth's placeholder <|PAD_TOKEN|> is an added
+    # token that to_dict() also redacts (-> '<PAD_TOKEN>', not in vocab); <|endoftext|>
+    # (id 151643) is in the original vocab, so no embedding resize and it survives.
+    tokenizer.pad_token = QWEN_PAD_TOKEN
     model = FastLanguageModel.get_peft_model(
         model,
         r=config.lora_r,
@@ -150,7 +152,9 @@ def run_train(config: TrainConfig) -> None:
     # Passing the real Qwen eos into the CONSTRUCTOR sticks (a post-hoc setattr does not
     # survive SFTTrainer's arg processing). Guard for an older TRL that lacks the arg.
     try:
-        sft_args = SFTConfig(eos_token=QWEN_EOS_TOKEN, **sft_kwargs)
+        sft_args = SFTConfig(
+            eos_token=QWEN_EOS_TOKEN, pad_token=QWEN_PAD_TOKEN, **sft_kwargs
+        )
     except TypeError:
         sft_args = SFTConfig(**sft_kwargs)
 
