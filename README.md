@@ -115,7 +115,18 @@ uv pip install torch peft accelerate safetensors
 make serve                           # serves the fine-tuned model
 ```
 
+## Disclaimer and attribution
+
+Personal, non-commercial, educational project. Not affiliated with or endorsed by the BCCI,
+the Indian Premier League, or any franchise. Team names are used only to identify real
+matches; no trademarked logos are bundled (teams render as generated monogram crests).
+
+- Match data: [Cricsheet](https://cricsheet.org/), used with attribution per its license.
+- Base model: Qwen2.5-1.5B-Instruct (Apache 2.0).
+- The commentary training data is synthetic (generated for this project); no third-party
+  commentary corpus is redistributed.
+
 ## License
 
-MIT. Cricket data is from [Cricsheet](https://cricsheet.org/). No trademarked team logos are
-bundled; teams render as colored monogram crests.
+MIT for the code in this repository. Model and dataset artifacts carry their own licenses;
+see their cards on the Hugging Face Hub.
