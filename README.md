@@ -76,6 +76,17 @@ make serve ARGS="--stub"      # run the API with a stub runtime (no model) for f
 make serve                    # run the API with the real model (transformers + peft)
 ```
 
+The stub runtime needs nothing extra and emits one fixed placeholder line (it proves the
+pipeline). The real model (`make serve`) needs the local inference deps once, kept out of
+the locked dependencies so the default install stays lean:
+
+```bash
+uv pip install torch peft accelerate safetensors
+```
+
+First real run downloads the base model (~3GB) and the adapter, then both are cached. On
+Apple Silicon it serves fp16 on MPS.
+
 Endpoints: `GET /matches`, `GET /matches/{id}`, `GET /personas`, and the replay stream
 `GET /matches/{id}/stream?persona=broadcast` (SSE: a `state` event per delivery, then
 `token` events, then a `ball` event with the validated line and its provenance).
