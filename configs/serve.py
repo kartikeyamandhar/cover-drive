@@ -51,7 +51,8 @@ class ServeConfig(BaseModel):
     processed_dir: Path = Path("data/processed")
     demo_match_ids: tuple[str, ...] = ()  # explicit allow-list; empty => discover from dir
     max_listed: int = 8  # cap the discovered listing (ignored when demo_match_ids is set)
-    pacing_seconds: float = 0.6  # delay between balls when streaming a replay
+    pacing_seconds: float = 1.8  # default delay between balls (the client can override via ?pace)
+    max_pacing_seconds: float = 8.0  # clamp on the client-supplied pace
 
     # API.
     cors_origins: tuple[str, ...] = ("http://localhost:3000",)

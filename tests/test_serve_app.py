@@ -118,3 +118,10 @@ def test_stream_emits_state_then_tokens_then_ball(client: TestClient) -> None:
 def test_stream_rejects_unknown_persona_and_match(client: TestClient) -> None:
     assert client.get("/matches/1082591/stream?persona=bogus").status_code == 404
     assert client.get("/matches/9999/stream?persona=broadcast").status_code == 404
+
+
+def test_stream_accepts_a_client_pace_override(client: TestClient) -> None:
+    # The speed control passes ?pace; pace=0 streams with no inter-ball delay.
+    resp = client.get("/matches/1082591/stream?persona=broadcast&pace=0")
+    assert resp.status_code == 200
+    assert resp.text.count("event: ball") == 2

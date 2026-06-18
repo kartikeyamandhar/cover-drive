@@ -21,26 +21,28 @@
 }
 
 .mark {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--r2);
-  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-  box-shadow: 0 6px 18px -6px var(--accent-glow);
-  position: relative;
+  color: var(--text);
   flex-shrink: 0;
-}
-.mark::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, transparent 55%, rgba(255, 255, 255, 0.22));
 }
 
 .title {
   font-size: var(--fs-xl);
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
+}
+
+.matchbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.matchbarLabel {
+  font-size: var(--fs-meta);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .subtitle {
@@ -67,6 +69,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--s4);
+}
+
+.boardWrap {
+  position: relative;
 }
 
 .right {
@@ -160,12 +166,7 @@
 @media (min-width: 980px) {
   .page {
     padding: var(--s6) var(--s6) var(--s4);
-    gap: var(--s6);
-  }
-  .topbar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    gap: var(--s5);
   }
   .grid {
     grid-template-columns: minmax(320px, 380px) 1fr;

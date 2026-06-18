@@ -28,8 +28,15 @@ export function getPersonas(signal?: AbortSignal): Promise<PersonaInfo[]> {
   return getJSON<PersonaInfo[]>("/personas", signal);
 }
 
-// The SSE replay endpoint, consumed by an EventSource in useReplay.
-export function streamUrl(matchId: string, persona: string, fromBall: number): string {
+// The SSE replay endpoint, consumed by an EventSource in useReplay. `pace` (seconds between
+// deliveries) is optional; omit it to use the server default.
+export function streamUrl(
+  matchId: string,
+  persona: string,
+  fromBall: number,
+  pace?: number,
+): string {
   const params = new URLSearchParams({ persona, from_ball: String(fromBall) });
+  if (pace !== undefined) params.set("pace", String(pace));
   return `${API_BASE}/matches/${encodeURIComponent(matchId)}/stream?${params}`;
 }

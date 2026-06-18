@@ -9,6 +9,7 @@ import { Scoreboard, ScoreboardSkeleton } from "@/components/Scoreboard";
 import { CommentaryFeed, CommentaryFeedSkeleton } from "@/components/CommentaryFeed";
 import { PersonaSwitcher } from "@/components/PersonaSwitcher";
 import { ReplayControls } from "@/components/ReplayControls";
+import { EventBurst } from "@/components/EventBurst";
 import { Skeleton } from "@/components/Skeleton";
 import styles from "./page.module.css";
 
@@ -45,14 +46,17 @@ export default function Home() {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.brand}>
-          <span className={styles.mark} aria-hidden="true" />
+          <BrandMark />
           <div>
             <h1 className={styles.title}>Cover Drive</h1>
             <p className={styles.subtitle}>Ball-by-ball voices · verified facts</p>
           </div>
         </div>
         {load === "ready" && matches.length > 0 && (
-          <MatchPicker matches={matches} active={matchId} onSelect={setMatchId} />
+          <div className={styles.matchbar}>
+            <span className={styles.matchbarLabel}>Select match</span>
+            <MatchPicker matches={matches} active={matchId} onSelect={setMatchId} />
+          </div>
         )}
       </header>
 
@@ -78,6 +82,30 @@ export default function Home() {
   );
 }
 
+function BrandMark() {
+  return (
+    <svg
+      className={styles.mark}
+      width="36"
+      height="36"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" opacity="0.9" />
+      <path
+        d="M9 3.6 C 6 9, 6 15, 9 20.4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <g stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.8">
+        <path d="M7.1 7.2 h1.9 M6.7 10 h1.9 M6.7 14 h1.9 M7.1 16.8 h1.9" />
+      </g>
+    </svg>
+  );
+}
+
 function MatchCenter({
   matchId,
   personas,
@@ -92,7 +120,16 @@ function MatchCenter({
   return (
     <div className={styles.grid}>
       <aside className={styles.left}>
-        {replay.current ? <Scoreboard data={replay.current.scoreboard} /> : <ScoreboardSkeleton />}
+        <div className={styles.boardWrap}>
+          {replay.current ? (
+            <Scoreboard data={replay.current.scoreboard} />
+          ) : (
+            <ScoreboardSkeleton />
+          )}
+          {replay.current && (
+            <EventBurst key={replay.current.ballId} event={replay.current.scoreboard.event} />
+          )}
+        </div>
         <PersonaSwitcher
           personas={personas}
           active={replay.persona}
@@ -114,9 +151,11 @@ function MatchCenter({
           status={replay.status}
           ballNumber={replay.cursor + 1}
           totalBalls={totalBalls}
+          pace={replay.pace}
           onPlay={replay.play}
           onPause={replay.pause}
           onRestart={replay.restart}
+          onSpeed={replay.setSpeed}
         />
       </section>
     </div>

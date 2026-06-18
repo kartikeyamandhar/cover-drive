@@ -79,8 +79,14 @@ def create_app(
         raise HTTPException(status_code=404, detail=f"unknown match {match_id!r}")
 
     @app.get("/matches/{match_id}/stream")
-    def stream(match_id: str, persona: str = "broadcast", from_ball: int = 0) -> StreamingResponse:
+    def stream(
+        match_id: str,
+        persona: str = "broadcast",
+        from_ball: int = 0,
+        pace: float | None = None,
+    ) -> StreamingResponse:
         voice = _resolve_persona(persona)
+        delay = cfg.pacing_seconds if pace is None else max(0.0, min(pace, cfg.max_pacing_seconds))
         try:
             balls = repository.load_balls(match_id)
         except UnknownMatchError as exc:
@@ -93,8 +99,8 @@ def create_app(
                 for chunk in token_chunks(result.line):
                     yield _sse("token", json.dumps({"t": chunk}))
                 yield _sse("ball", result.model_dump_json())
-                if cfg.pacing_seconds > 0:
-                    time.sleep(cfg.pacing_seconds)
+                if delay > 0:
+                    time.sleep(delay)
             yield _sse("done", json.dumps({"match_id": match_id, "persona": voice.key}))
 
         return StreamingResponse(

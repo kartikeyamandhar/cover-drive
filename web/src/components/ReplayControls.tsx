@@ -5,10 +5,20 @@ interface Props {
   status: ReplayStatus;
   ballNumber: number; // 1-based, 0 if none yet
   totalBalls: number;
+  pace: number | undefined;
   onPlay: () => void;
   onPause: () => void;
   onRestart: () => void;
+  onSpeed: (pace: number) => void;
 }
+
+// Pace is seconds between deliveries; 1x matches the server default (1.8s).
+const SPEEDS = [
+  { label: "0.5×", pace: 3.6 },
+  { label: "1×", pace: 1.8 },
+  { label: "2×", pace: 0.9 },
+];
+const DEFAULT_PACE = 1.8;
 
 const STATUS_LABEL: Record<ReplayStatus, string> = {
   idle: "Ready",
@@ -23,12 +33,15 @@ export function ReplayControls({
   status,
   ballNumber,
   totalBalls,
+  pace,
   onPlay,
   onPause,
   onRestart,
+  onSpeed,
 }: Props) {
   const isPlaying = status === "playing" || status === "connecting";
   const progress = totalBalls > 0 ? Math.min(ballNumber / totalBalls, 1) : 0;
+  const activePace = pace ?? DEFAULT_PACE;
 
   return (
     <div className={styles.bar}>
@@ -59,6 +72,20 @@ export function ReplayControls({
         <div className={styles.track} role="progressbar" aria-valuenow={Math.round(progress * 100)}>
           <div className={styles.fill} style={{ width: `${progress * 100}%` }} />
         </div>
+      </div>
+
+      <div className={styles.speed} role="group" aria-label="Replay speed">
+        {SPEEDS.map((s) => (
+          <button
+            key={s.label}
+            type="button"
+            className={`${styles.speedBtn} ${s.pace === activePace ? styles.speedActive : ""}`}
+            aria-pressed={s.pace === activePace}
+            onClick={() => onSpeed(s.pace)}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
     </div>
   );

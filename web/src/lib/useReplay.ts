@@ -76,16 +76,19 @@ function reducer(state: State, action: Action): State {
 
 export interface ReplayController extends State {
   persona: string;
+  pace: number | undefined;
   current: BallEntry | undefined;
   play: () => void;
   pause: () => void;
   restart: () => void;
   selectPersona: (persona: string) => void;
+  setSpeed: (pace: number) => void;
 }
 
 export function useReplay(matchId: string | null, initialPersona: string): ReplayController {
   const [state, dispatch] = useReducer(reducer, INITIAL);
   const [persona, setPersona] = useState(initialPersona);
+  const [pace, setPaceState] = useState<number | undefined>(undefined);
   const [paused, setPaused] = useState(true);
   const [epoch, setEpoch] = useState(0); // bump to force a reconnect
 
@@ -103,7 +106,7 @@ export function useReplay(matchId: string | null, initialPersona: string): Repla
     dispatch({ type: "OPENING" });
     finishedRef.current = false;
     idxRef.current = fromBallRef.current - 1;
-    const es = new EventSource(streamUrl(matchId, persona, fromBallRef.current));
+    const es = new EventSource(streamUrl(matchId, persona, fromBallRef.current, pace));
 
     const on = (name: string, fn: (data: string) => void) =>
       es.addEventListener(name, (e) => fn((e as MessageEvent).data));
@@ -141,7 +144,7 @@ export function useReplay(matchId: string | null, initialPersona: string): Repla
     };
 
     return () => es.close();
-  }, [matchId, persona, paused, epoch]);
+  }, [matchId, persona, pace, paused, epoch]);
 
   const play = useCallback(() => {
     if (state.status === "done") {
@@ -174,13 +177,22 @@ export function useReplay(matchId: string | null, initialPersona: string): Repla
     setPaused(false);
   }, []);
 
+  const setSpeed = useCallback((next: number) => {
+    // resume from the current delivery at the new pace (reconnects only if playing)
+    fromBallRef.current = Math.max(idxRef.current, 0);
+    setPaceState(next);
+    setEpoch((e) => e + 1);
+  }, []);
+
   return {
     ...state,
     persona,
+    pace,
     current: state.cursor >= 0 ? state.balls[state.cursor] : undefined,
     play,
     pause,
     restart,
     selectPersona,
+    setSpeed,
   };
 }
