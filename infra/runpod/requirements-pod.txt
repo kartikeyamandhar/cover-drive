@@ -1,10 +1,11 @@
 # GPU stack, installed on the RunPod pod ONLY (needs CUDA). The Mac never installs these.
-# Start from a RunPod PyTorch CUDA image (torch already present); unsloth pins the rest.
-# NOTE: train.py targets the current TRL API (max_length + processing_class), which is
-# TRL >=0.16. If unsloth resolves an older trl and the run errors on those kwargs, pin
-# the exact pair from unsloth's release notes and record it in docs/phases/phase-4.md.
-unsloth
-trl>=0.16
+# IMPORTANT: a plain `unsloth` install pulls the LATEST torch (a 2.10 preview that wants
+# 2.11), which mismatches the RunPod cu124 image's stable torch 2.4.1. That mismatch makes
+# Unsloth skip its cpp extensions and fall back to a Python path whose tokenizer can't be
+# pickled by datasets ('cannot pickle ConfigModuleInstance'). The torch-matched Unsloth
+# build keeps torch at the image's 2.4.1+cu124 and the whole stack coherent. train.py is
+# robust to the TRL version unsloth pulls (it auto-detects the kwarg names).
+unsloth[cu124-torch240]
 peft
 bitsandbytes
 accelerate

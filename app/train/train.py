@@ -156,9 +156,7 @@ def run_train(config: TrainConfig) -> None:
     # Passing the real Qwen eos into the CONSTRUCTOR sticks (a post-hoc setattr does not
     # survive SFTTrainer's arg processing). Guard for an older TRL that lacks the arg.
     try:
-        sft_args = SFTConfig(
-            eos_token=QWEN_EOS_TOKEN, pad_token=QWEN_PAD_TOKEN, **sft_kwargs
-        )
+        sft_args = SFTConfig(eos_token=QWEN_EOS_TOKEN, pad_token=QWEN_PAD_TOKEN, **sft_kwargs)
     except TypeError:
         sft_args = SFTConfig(**sft_kwargs)
 
