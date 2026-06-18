@@ -5,6 +5,8 @@ import { API_BASE, getMatches, getPersonas } from "@/lib/api";
 import { useReplay } from "@/lib/useReplay";
 import type { MatchSummary, PersonaInfo } from "@/lib/types";
 import { MatchPicker } from "@/components/MatchPicker";
+import { Bracket } from "@/components/Bracket";
+import { hasBracket } from "@/lib/bracket";
 import { Scoreboard, ScoreboardSkeleton } from "@/components/Scoreboard";
 import { CommentaryFeed, CommentaryFeedSkeleton } from "@/components/CommentaryFeed";
 import { PersonaSwitcher } from "@/components/PersonaSwitcher";
@@ -54,8 +56,14 @@ export default function Home() {
         </div>
         {load === "ready" && matches.length > 0 && (
           <div className={styles.matchbar}>
-            <span className={styles.matchbarLabel}>Select match</span>
-            <MatchPicker matches={matches} active={matchId} onSelect={setMatchId} />
+            {hasBracket(matches.map((m) => m.match_id)) ? (
+              <Bracket matches={matches} active={matchId} onSelect={setMatchId} />
+            ) : (
+              <>
+                <span className={styles.matchbarLabel}>Select match</span>
+                <MatchPicker matches={matches} active={matchId} onSelect={setMatchId} />
+              </>
+            )}
           </div>
         )}
       </header>
