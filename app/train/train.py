@@ -146,6 +146,10 @@ def run_train(config: TrainConfig) -> None:
         "seed": config.seed,
         "output_dir": str(config.output_dir),
         "report_to": report_to,
+        # Tokenize in ONE process: with num_proc>1, datasets pickles the map fn to workers
+        # and chokes on Unsloth's torch-patched tokenizer ('cannot pickle ConfigModuleInstance').
+        # 4k examples tokenize in seconds single-process.
+        "dataset_num_proc": 1,
         seq_kw: config.max_seq_len,
     }
     # TRL/Unsloth turns a None eos_token into a '<EOS_TOKEN>' placeholder it then rejects.
