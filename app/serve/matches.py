@@ -34,16 +34,22 @@ class UnknownMatchError(KeyError):
 class MatchRepository:
     """Lists and loads bundled matches from a directory of per-ball JSONL files."""
 
-    def __init__(self, processed_dir: Path, allowed_ids: Sequence[str] = ()) -> None:
+    def __init__(
+        self, processed_dir: Path, allowed_ids: Sequence[str] = (), max_listed: int | None = None
+    ) -> None:
         self._dir = processed_dir
         self._allowed = tuple(allowed_ids)
+        self._max_listed = max_listed
         self._summaries: dict[str, MatchSummary] | None = None
 
     def _known_ids(self) -> list[str]:
         ids = sorted(p.stem for p in self._dir.glob("*.jsonl"))
         if self._allowed:
+            # An explicit allow-list is authoritative and never capped.
             allowed = set(self._allowed)
-            ids = [match_id for match_id in ids if match_id in allowed]
+            return [match_id for match_id in ids if match_id in allowed]
+        if self._max_listed is not None:
+            ids = ids[: self._max_listed]
         return ids
 
     def _summarize(self, match_id: str) -> MatchSummary:

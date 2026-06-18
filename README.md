@@ -80,14 +80,25 @@ Endpoints: `GET /matches`, `GET /matches/{id}`, `GET /personas`, and the replay 
 `GET /matches/{id}/stream?persona=broadcast` (SSE: a `state` event per delivery, then
 `token` events, then a `ball` event with the validated line and its provenance).
 
+## Web app
+
+A Next.js match-center (`web/`) replays a bundled match ball by ball: the scoreboard
+advances one delivery at a time, commentary streams token by token, and a persona switcher
+re-renders the same passage in another voice. It talks to the serving API only over
+HTTP/SSE (`NEXT_PUBLIC_API_BASE`, default `http://localhost:8000`).
+
+```bash
+make serve ARGS="--stub"      # 1. start the API with a stub runtime (no model needed)
+cd web && pnpm install && pnpm dev   # 2. then open http://localhost:3000, press play
+```
+
 ## Status
 
 The fine-tune is trained and has passed the Phase 5 training gate (it beats the base
-model on faithfulness with margin, with healthy diversity), and the Phase 6 serving
-layer is built. The project is built in gated phases: phases 1 to 5 establish a
-fine-tune that beats the base model on a faithfulness-and-style gate; phases 6 to 8 build
-the serving layer, the web app, and the deployment around it. Next: the Next.js replay
-app (Phase 7).
+model on faithfulness with margin, with healthy diversity); the Phase 6 serving layer and
+the Phase 7 web app are built. The project is built in gated phases: phases 1 to 5
+establish a fine-tune that beats the base model on a faithfulness-and-style gate; phases 6
+to 8 build the serving layer, the web app, and the deployment. Next: deploy (Phase 8).
 
 ## License
 

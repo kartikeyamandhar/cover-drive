@@ -49,7 +49,8 @@ class ServeConfig(BaseModel):
 
     # Demo replay.
     processed_dir: Path = Path("data/processed")
-    demo_match_ids: tuple[str, ...] = ()  # empty => expose every match in processed_dir
+    demo_match_ids: tuple[str, ...] = ()  # explicit allow-list; empty => discover from dir
+    max_listed: int = 8  # cap the discovered listing (ignored when demo_match_ids is set)
     pacing_seconds: float = 0.6  # delay between balls when streaming a replay
 
     # API.

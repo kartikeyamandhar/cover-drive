@@ -82,3 +82,20 @@ def test_path_traversal_is_rejected(tmp_path: Path) -> None:
     repo = MatchRepository(tmp_path)
     with pytest.raises(UnknownMatchError):
         repo.load_balls("../../etc/passwd")
+
+
+def test_max_listed_caps_discovery(tmp_path: Path) -> None:
+    for i in range(5):
+        _write_match(tmp_path, f"200{i}")
+    repo = MatchRepository(tmp_path, max_listed=2)
+    listed = [s.match_id for s in repo.list_matches()]
+    assert listed == ["2000", "2001"]  # sorted, capped
+    with pytest.raises(UnknownMatchError):
+        repo.load_balls("2004")  # beyond the cap, not served
+
+
+def test_allow_list_overrides_the_cap(tmp_path: Path) -> None:
+    for i in range(5):
+        _write_match(tmp_path, f"200{i}")
+    repo = MatchRepository(tmp_path, allowed_ids=("2003", "2004"), max_listed=2)
+    assert {s.match_id for s in repo.list_matches()} == {"2003", "2004"}

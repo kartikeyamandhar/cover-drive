@@ -1,0 +1,139 @@
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  overflow-y: auto;
+  padding-right: var(--s2);
+  contain: content;
+}
+
+.line {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid color-mix(in srgb, var(--voice) 70%, transparent);
+  border-radius: var(--r2);
+  padding: var(--s3) var(--s4);
+  animation: rise var(--dur-3) var(--ease) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.liveLine {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--voice) 8%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  border-color: color-mix(in srgb, var(--voice) 30%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--voice) 16%, transparent);
+}
+
+.lineHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+}
+
+.voice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.voiceTag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--voice);
+  background: color-mix(in srgb, var(--voice) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--voice) 32%, transparent);
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+}
+
+.voiceName {
+  font-size: var(--fs-meta);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event {
+  font-size: var(--fs-meta);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.text {
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.16em;
+  background: var(--voice);
+  border-radius: 1px;
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.fallback {
+  display: inline-block;
+  margin-top: var(--s2);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--voice-radio);
+  border: 1px dashed color-mix(in srgb, var(--voice-radio) 40%, transparent);
+  border-radius: var(--r-full);
+  padding: 1px 8px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s1);
+  height: 100%;
+  min-height: 200px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.emptyHint {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}

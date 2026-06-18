@@ -31,8 +31,12 @@ def _build_runtime(stub: bool, config: ServeConfig) -> RuntimeAdapter:
     return TransformersPeftRuntime(config)
 
 
+def _repo(config: ServeConfig) -> MatchRepository:
+    return MatchRepository(config.processed_dir, config.demo_match_ids, config.max_listed)
+
+
 def _smoke(config: ServeConfig, persona_key: str, limit: int) -> None:
-    repo = MatchRepository(config.processed_dir, config.demo_match_ids)
+    repo = _repo(config)
     summaries = repo.list_matches()
     if not summaries:
         raise SystemExit(f"no matches under {config.processed_dir}")
@@ -65,8 +69,7 @@ def main() -> None:
     import uvicorn
 
     runtime = _build_runtime(args.stub, config)
-    repo = MatchRepository(config.processed_dir, config.demo_match_ids)
-    app = create_app(runtime=runtime, repository=repo, config=config)
+    app = create_app(runtime=runtime, repository=_repo(config), config=config)
     uvicorn.run(app, host=args.host, port=args.port)
 
 

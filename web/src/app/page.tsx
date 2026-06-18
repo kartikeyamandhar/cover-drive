@@ -1,66 +1,167 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { API_BASE, getMatches, getPersonas } from "@/lib/api";
+import { useReplay } from "@/lib/useReplay";
+import type { MatchSummary, PersonaInfo } from "@/lib/types";
+import { MatchPicker } from "@/components/MatchPicker";
+import { Scoreboard, ScoreboardSkeleton } from "@/components/Scoreboard";
+import { CommentaryFeed, CommentaryFeedSkeleton } from "@/components/CommentaryFeed";
+import { PersonaSwitcher } from "@/components/PersonaSwitcher";
+import { ReplayControls } from "@/components/ReplayControls";
+import { Skeleton } from "@/components/Skeleton";
 import styles from "./page.module.css";
 
+type Load = "loading" | "ready" | "error";
+
 export default function Home() {
+  const [matches, setMatches] = useState<MatchSummary[]>([]);
+  const [personas, setPersonas] = useState<PersonaInfo[]>([]);
+  const [load, setLoad] = useState<Load>("loading");
+  const [loadError, setLoadError] = useState("");
+  const [matchId, setMatchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    void (async () => {
+      try {
+        const [ms, ps] = await Promise.all([getMatches(ctrl.signal), getPersonas(ctrl.signal)]);
+        setMatches(ms);
+        setPersonas(ps);
+        setMatchId((cur) => cur ?? ms[0]?.match_id ?? null);
+        setLoad("ready");
+      } catch (e) {
+        if (ctrl.signal.aborted) return;
+        setLoadError(e instanceof Error ? e.message : "Failed to load");
+        setLoad("error");
+      }
+    })();
+    return () => ctrl.abort();
+  }, []);
+
+  const selected = matches.find((m) => m.match_id === matchId) ?? null;
+
   return (
     <div className={styles.page}>
+      <header className={styles.topbar}>
+        <div className={styles.brand}>
+          <span className={styles.mark} aria-hidden="true" />
+          <div>
+            <h1 className={styles.title}>Cover Drive</h1>
+            <p className={styles.subtitle}>Ball-by-ball voices · verified facts</p>
+          </div>
+        </div>
+        {load === "ready" && matches.length > 0 && (
+          <MatchPicker matches={matches} active={matchId} onSelect={setMatchId} />
+        )}
+      </header>
+
       <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        {load === "loading" && <LoadingShell />}
+        {load === "error" && <ErrorState message={loadError} />}
+        {load === "ready" && matches.length === 0 && <EmptyState />}
+        {load === "ready" && matches.length > 0 && matchId && (
+          <MatchCenter
+            key={matchId}
+            matchId={matchId}
+            personas={personas}
+            totalBalls={selected?.balls ?? 0}
+          />
+        )}
       </main>
+
+      <footer className={styles.footer}>
+        Facts from Cricsheet ball data · voice from a fine-tuned Qwen2.5-1.5B · a contradicted line
+        never ships
+      </footer>
+    </div>
+  );
+}
+
+function MatchCenter({
+  matchId,
+  personas,
+  totalBalls,
+}: {
+  matchId: string;
+  personas: PersonaInfo[];
+  totalBalls: number;
+}) {
+  const replay = useReplay(matchId, "broadcast");
+  const live = replay.status === "playing" || replay.status === "connecting";
+  return (
+    <div className={styles.grid}>
+      <aside className={styles.left}>
+        {replay.current ? <Scoreboard data={replay.current.scoreboard} /> : <ScoreboardSkeleton />}
+        <PersonaSwitcher
+          personas={personas}
+          active={replay.persona}
+          onSelect={replay.selectPersona}
+        />
+      </aside>
+
+      <section className={styles.right}>
+        <div className={styles.feedHead}>
+          <h2 className={styles.feedTitle}>Commentary</h2>
+          {replay.status === "error" && replay.error && (
+            <span className={styles.feedError}>{replay.error}</span>
+          )}
+        </div>
+        <div className={styles.feedScroll}>
+          <CommentaryFeed balls={replay.balls} cursor={replay.cursor} live={live} />
+        </div>
+        <ReplayControls
+          status={replay.status}
+          ballNumber={replay.cursor + 1}
+          totalBalls={totalBalls}
+          onPlay={replay.play}
+          onPause={replay.pause}
+          onRestart={replay.restart}
+        />
+      </section>
+    </div>
+  );
+}
+
+function LoadingShell() {
+  return (
+    <div className={styles.grid}>
+      <aside className={styles.left}>
+        <ScoreboardSkeleton />
+        <Skeleton height="9rem" radius="var(--r3)" />
+      </aside>
+      <section className={styles.right}>
+        <div className={styles.feedHead}>
+          <h2 className={styles.feedTitle}>Commentary</h2>
+        </div>
+        <div className={styles.feedScroll}>
+          <CommentaryFeedSkeleton />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className={styles.notice}>
+      <h2 className={styles.noticeTitle}>Can&apos;t reach the serving API</h2>
+      <p className={styles.noticeBody}>
+        Expected it at <code className={styles.code}>{API_BASE}</code>. Start it and reload:
+      </p>
+      <pre className={styles.cmd}>make serve ARGS=&quot;--stub&quot;</pre>
+      <p className={styles.noticeDim}>{message}</p>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className={styles.notice}>
+      <h2 className={styles.noticeTitle}>No matches bundled</h2>
+      <p className={styles.noticeBody}>
+        The serving API returned no matches. Point it at a directory of processed deliveries.
+      </p>
     </div>
   );
 }
