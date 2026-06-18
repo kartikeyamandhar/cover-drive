@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { track } from "@vercel/analytics";
 import { getPersonas } from "@/lib/api";
 import { type Catalog, findMatch, loadCatalog } from "@/lib/catalog";
 import { useReplay } from "@/lib/useReplay";
@@ -169,7 +170,10 @@ function MatchCenter({
           ballNumber={replay.cursor + 1}
           totalBalls={totalBalls}
           pace={replay.pace}
-          onPlay={replay.play}
+          onPlay={() => {
+            if (replay.status !== "paused") track("replay_play");
+            replay.play();
+          }}
           onPause={replay.pause}
           onRestart={replay.restart}
           onSpeed={replay.setSpeed}
