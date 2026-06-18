@@ -1,22 +1,23 @@
-import type { MatchSummary } from "@/lib/types";
-import { ADVANCE, BRACKET_META, type BracketMeta, type Stage, TOURNAMENT } from "@/lib/bracket";
+import { Fragment } from "react";
+import type { CatalogMatch, Season } from "@/lib/catalog";
+import { roundLabel } from "@/lib/catalog";
 import { teamCode } from "@/lib/teams";
 import { TeamBadge } from "./TeamBadge";
 import styles from "./Bracket.module.css";
 
 interface Props {
-  matches: MatchSummary[];
+  season: Season;
   active: string | null;
-  onSelect: (matchId: string) => void;
+  onSelect: (id: string) => void;
 }
 
 function Side({ team, won }: { team: string; won: boolean }) {
   return (
     <span className={`${styles.side} ${won ? styles.won : styles.lost}`}>
-      <TeamBadge team={team} size={26} />
+      <TeamBadge team={team} size={24} />
       <span className={styles.code}>{teamCode(team)}</span>
       {won && (
-        <span className={styles.tick} title="Winner" aria-label="winner">
+        <span className={styles.tick} aria-label="winner">
           ✓
         </span>
       )}
@@ -24,43 +25,66 @@ function Side({ team, won }: { team: string; won: boolean }) {
   );
 }
 
-function MatchNode({
-  match,
-  meta,
-  label,
+function LeagueRow({
+  m,
   active,
   onSelect,
 }: {
-  match: MatchSummary;
-  meta: BracketMeta;
-  label: string;
+  m: CatalogMatch;
   active: boolean;
   onSelect: (id: string) => void;
 }) {
-  const [a, b] = match.teams;
-  const advance =
-    meta.stage === "Final" ? `Champions · ${teamCode(meta.winner)}` : ADVANCE[meta.stage];
+  const [a, b] = m.teams;
+  return (
+    <button
+      type="button"
+      className={`${styles.row} ${active ? styles.activeRow : ""}`}
+      aria-pressed={active}
+      onClick={() => onSelect(m.id)}
+    >
+      <span className={`${styles.no} tnum`}>{m.matchNo ?? "·"}</span>
+      <span className={styles.rowTeams}>
+        <span className={m.winner === a ? styles.w : styles.l}>{teamCode(a)}</span>
+        <span className={styles.rowVs}>v</span>
+        <span className={m.winner === b ? styles.w : styles.l}>{teamCode(b)}</span>
+      </span>
+      <span className={`${styles.rowBalls} tnum`}>{m.balls}</span>
+    </button>
+  );
+}
+
+function PlayoffNode({
+  m,
+  active,
+  onSelect,
+}: {
+  m: CatalogMatch;
+  active: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const [a, b] = m.teams;
+  const isFinal = m.round === 3;
   return (
     <button
       type="button"
       className={`${styles.node} ${active ? styles.active : ""}`}
       aria-pressed={active}
-      onClick={() => onSelect(match.match_id)}
+      onClick={() => onSelect(m.id)}
     >
       <div className={styles.nodeTop}>
-        <span className={styles.stage}>{label}</span>
-        <span className={styles.date}>{meta.date}</span>
+        <span className={styles.stage}>{m.stage}</span>
+        <span className={styles.date}>{m.date}</span>
       </div>
       <div className={styles.teams}>
-        <Side team={a} won={meta.winner === a} />
+        <Side team={a} won={m.winner === a} />
         <span className={styles.vs}>v</span>
-        <Side team={b} won={meta.winner === b} />
+        <Side team={b} won={m.winner === b} />
       </div>
       <div className={styles.nodeFoot}>
-        <span className={`${styles.balls} tnum`}>{match.balls} balls</span>
-        {advance && (
-          <span className={meta.stage === "Final" ? styles.champ : styles.advance}>{advance}</span>
-        )}
+        <span className={`${styles.balls} tnum`}>{m.balls} balls</span>
+        <span className={isFinal ? styles.champ : styles.advance}>
+          {isFinal && m.winner ? `Champions · ${teamCode(m.winner)}` : "Winner advances"}
+        </span>
       </div>
     </button>
   );
@@ -83,43 +107,24 @@ function Chevron() {
   );
 }
 
-export function Bracket({ matches, active, onSelect }: Props) {
-  const byId = new Map(matches.map((m) => [m.match_id, m]));
-  const ofStage = (stage: Stage): MatchSummary | undefined => {
-    const id = Object.keys(BRACKET_META).find(
-      (k) => BRACKET_META[k]?.stage === stage && byId.has(k),
-    );
-    return id ? byId.get(id) : undefined;
-  };
-
-  const league = Object.entries(BRACKET_META)
-    .filter(([id, m]) => m.stage === "league" && byId.has(id))
-    .sort((x, y) => (x[1].matchNo ?? 0) - (y[1].matchNo ?? 0))
-    .map(([id]) => byId.get(id)!);
-
-  const q1 = ofStage("Qualifier 1");
-  const elim = ofStage("Eliminator");
-  const q2 = ofStage("Qualifier 2");
-  const final = ofStage("Final");
-
-  const node = (match: MatchSummary | undefined, label: string) =>
-    match ? (
-      <MatchNode
-        match={match}
-        meta={BRACKET_META[match.match_id]!}
-        label={label}
-        active={match.match_id === active}
-        onSelect={onSelect}
-      />
-    ) : null;
+export function Bracket({ season, active, onSelect }: Props) {
+  const league = season.matches
+    .filter((m) => m.round === 0)
+    .sort((x, y) => (x.matchNo ?? 0) - (y.matchNo ?? 0));
+  const rounds = [1, 2, 3]
+    .map((r) => ({
+      r,
+      label: roundLabel(r, season.matches),
+      matches: season.matches.filter((m) => m.round === r),
+    }))
+    .filter((c) => c.matches.length > 0);
 
   return (
     <div className={styles.bracket}>
       <header className={styles.head}>
-        <h2 className={styles.title}>
-          {TOURNAMENT.name} <span className={styles.season}>{TOURNAMENT.season}</span>
-        </h2>
-        <span className={styles.sub}>Group stage to the final · pick any match to replay</span>
+        <h2 className={styles.title}>{season.label}</h2>
+        {season.champion && <span className={styles.champBadge}>🏆 {season.champion}</span>}
+        <span className={styles.sub}>{league.length} league matches · pick any to replay</span>
       </header>
 
       <div className={styles.flow}>
@@ -127,39 +132,22 @@ export function Bracket({ matches, active, onSelect }: Props) {
           <span className={styles.colLabel}>Group Stage</span>
           <div className={styles.group}>
             {league.map((m) => (
-              <MatchNode
-                key={m.match_id}
-                match={m}
-                meta={BRACKET_META[m.match_id]!}
-                label={`Match ${BRACKET_META[m.match_id]?.matchNo ?? ""}`}
-                active={m.match_id === active}
-                onSelect={onSelect}
-              />
+              <LeagueRow key={m.id} m={m} active={m.id === active} onSelect={onSelect} />
             ))}
           </div>
         </section>
 
-        <Chevron />
-
-        <section className={styles.col}>
-          <span className={styles.colLabel}>Playoffs</span>
-          {node(q1, "Qualifier 1")}
-          {node(elim, "Eliminator")}
-        </section>
-
-        <Chevron />
-
-        <section className={styles.col}>
-          <span className={styles.colLabel}>Qualifier 2</span>
-          {node(q2, "Qualifier 2")}
-        </section>
-
-        <Chevron />
-
-        <section className={styles.col}>
-          <span className={styles.colLabel}>Final</span>
-          {node(final, "Final")}
-        </section>
+        {rounds.map((c) => (
+          <Fragment key={c.r}>
+            <Chevron />
+            <section className={styles.col}>
+              <span className={styles.colLabel}>{c.label}</span>
+              {c.matches.map((m) => (
+                <PlayoffNode key={m.id} m={m} active={m.id === active} onSelect={onSelect} />
+              ))}
+            </section>
+          </Fragment>
+        ))}
       </div>
     </div>
   );

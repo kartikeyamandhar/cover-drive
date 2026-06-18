@@ -42,8 +42,13 @@ class MatchRepository:
         self._max_listed = max_listed
         self._summaries: dict[str, MatchSummary] | None = None
 
+    def _all_ids(self) -> set[str]:
+        """Every match present on disk (the set that can be replayed)."""
+        return {p.stem for p in self._dir.glob("*.jsonl")}
+
     def _known_ids(self) -> list[str]:
-        ids = sorted(p.stem for p in self._dir.glob("*.jsonl"))
+        """The subset shown by ``/matches`` (allow-list, else a capped discovery)."""
+        ids = sorted(self._all_ids())
         if self._allowed:
             # An explicit allow-list is authoritative and never capped.
             allowed = set(self._allowed)
@@ -74,8 +79,11 @@ class MatchRepository:
         return list(self._summaries.values())
 
     def load_balls(self, match_id: str) -> list[ServeBall]:
-        """The ordered deliveries for one match. Raises ``UnknownMatchError`` if unknown."""
-        if match_id not in set(self._known_ids()):
+        """The ordered deliveries for any match present on disk (not just the listed set).
+
+        Validated against the full processed set, which both serves the whole catalog and
+        blocks path traversal (an id is only honoured if a ``<id>.jsonl`` exists)."""
+        if match_id not in self._all_ids():
             raise UnknownMatchError(match_id)
         lines = (self._dir / f"{match_id}.jsonl").read_text(encoding="utf-8").splitlines()
         return [parse_serve_ball(line) for line in lines if line.strip()]

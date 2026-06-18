@@ -47,23 +47,12 @@ class ServeConfig(BaseModel):
     # deterministic fallback. The fallback always terminates, so output is always faithful.
     faithfulness_retries: int = 2
 
-    # Demo replay. The default allow-list is the IPL 2017 bracket the web app charts:
-    # league matches 1-6, then the four playoffs (Qualifier 1, Eliminator, Qualifier 2,
-    # Final). The frontend holds the bracket structure (stages, dates, winners) keyed on
-    # these ids; here we just expose exactly this set.
+    # Demo replay. The web app drives match selection from the bundled catalog
+    # (web/public/catalog.json, all 19 IPL seasons), so any processed match is replayable;
+    # `load_balls` validates an id against the full processed set. `demo_match_ids` /
+    # `max_listed` only shape the optional `/matches` listing (a fallback flat picker).
     processed_dir: Path = Path("data/processed")
-    demo_match_ids: tuple[str, ...] = (
-        "1082591",
-        "1082592",
-        "1082593",
-        "1082594",
-        "1082595",
-        "1082596",
-        "1082647",  # Qualifier 1
-        "1082648",  # Eliminator
-        "1082649",  # Qualifier 2
-        "1082650",  # Final
-    )
+    demo_match_ids: tuple[str, ...] = ()  # explicit listing allow-list; empty => discover
     max_listed: int = 8  # cap the discovered listing (ignored when demo_match_ids is set)
     pacing_seconds: float = 1.8  # default delay between balls (the client can override via ?pace)
     max_pacing_seconds: float = 8.0  # clamp on the client-supplied pace
