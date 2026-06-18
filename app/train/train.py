@@ -153,6 +153,25 @@ def run_train(config: TrainConfig) -> None:
         sft_args = SFTConfig(eos_token=QWEN_EOS_TOKEN, **sft_kwargs)
     except TypeError:
         sft_args = SFTConfig(**sft_kwargs)
+
+    # ROOT CAUSE of the '<EOS_TOKEN>' error: transformers TrainingArguments.to_dict()
+    # REDACTS any field whose name contains "token" (a guard for hub_token secrets),
+    # turning eos_token='<|im_end|>' into the literal '<EOS_TOKEN>'. Unsloth's patched
+    # SFTTrainer round-trips args through to_dict(), so the redacted value reaches TRL's
+    # eos validator (tokenizer.convert_tokens_to_ids('<EOS_TOKEN>') is None -> ValueError).
+    # Patch to_dict to restore the real, non-secret token fields so they survive the trip.
+    _orig_to_dict = type(sft_args).to_dict
+
+    def _to_dict_keep_tokens(self: Any) -> dict[str, Any]:
+        out: dict[str, Any] = _orig_to_dict(self)
+        for key in ("eos_token", "pad_token", "bos_token"):
+            value = getattr(self, key, None)
+            if value is not None:
+                out[key] = value
+        return out
+
+    type(sft_args).to_dict = _to_dict_keep_tokens  # type: ignore[method-assign]
+
     trainer = SFTTrainer(
         model=model,
         train_dataset=train_ds,
